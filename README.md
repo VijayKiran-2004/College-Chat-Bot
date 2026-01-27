@@ -32,8 +32,8 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/VijayKiran-2004/college-buddy.git
-cd college-buddy
+git clone https://github.com/VijayKiran-2004/College-Chat-Bot.git
+cd College-Chat-Bot
 ```
 
 ### 2. Create Virtual Environment
