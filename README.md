@@ -116,14 +116,14 @@ graph TD
     subgraph "RAG Engine"
         RAG <--> KB["Knowledge Base"]
         RAG <--> HybridSearch{"Hybrid Search"}
-        HybridSearch <--> FAISS[("FAISS Vector DB")]
-        HybridSearch <--> BM25[("BM25 Keyword DB")]
-        RAG --> LLM["Ollama (Gemma 2:2b)"]
+        HybridSearch <--> FAISS[(FAISS Vector DB)]
+        HybridSearch <--> BM25[(BM25 Keyword DB)]
+        RAG --> LLM["Ollama - Gemma 2:2b"]
     end
     
     subgraph "SQL Engine"
         SQL <--> QueryBuilder["Query Builder"]
-        QueryBuilder <--> SQLite[("Student Database")]
+        QueryBuilder <--> SQLite[(Student Database)]
         SQL --> Pandas["Pandas Analysis"]
     end
 ```
