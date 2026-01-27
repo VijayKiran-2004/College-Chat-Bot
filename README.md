@@ -1,31 +1,31 @@
 # College Buddy - AI Powered Campus Assistant
 
 ## Overview
-College Buddy is an intelligent conversational AI designed to assist students, faculty, and visitors of TKRCET. It uses **Retrieval-Augmented Generation (RAG)** to provide accurate, context-aware answers about college departments, faculty, placements, and campus life.
+College Buddy is an intelligent conversational AI designed to assist students, faculty, and visitors of TKRCET. It features a advanced **Hybrid RAG-SQL System** that intelligently routes queries between a semantic search engine (for general college info) and a structured SQL database (for student analytics).
 
 ## Key Features
-- 🧠 **Advanced RAG Architecture**: Combines vector search (FAISS) with keyword search (BM25) for high-precision retrieval.
-- 🤖 **Efficient LLM**: Powered by **Gemma 3 1B**, optimized for speed and low memory usage.
-- 🛡️ **Anti-Hallucination**: Built-in safeguards to prevent inventing names or facts.
-- 👥 **Faculty Intelligence**: Specialized handling for "Who is..." queries to provide complete details about HODs and Principals.
-- ⚡ **Fast & Lightweight**: Runs efficiently on local hardware.
+- 🧠 **Hybrid Architecture**: Intelligently routes queries to either **UltraRAG** (general info) or **SQL System** (tabular data).
+- 📊 **Student Data Analysis**: Can answer complex queries about student performance, placements, and departments (e.g., "List top 5 companies", "How many students got > 8.5 CGPA?").
+- 🤖 **Efficient LLM**: Powered by **Gemma 2:2b** via Ollama, optimized for speed on local hardware.
+- 🛡️ **Scope Validation**: Built-in filtering to reject non-college queries.
+-  **Knowledge Base**: Instant answers for critical facts (personnel, timings, location).
+- ⚡ **Fast & Lightweight**: Runs efficiently on local hardware with minimal memory footprint.
 
 ## Tech Stack
 - **Language**: Python 3.8+
-- **LLM**: Google Gemma 3 1B (via Ollama)
+- **LLM**: Google Gemma 2:2b (via Ollama)
 - **Embeddings**: all-MiniLM-L6-v2
-- **Vector DB**: FAISS (Facebook AI Similarity Search)
-- **Reranker**: Cross-Encoder (ms-marco-MiniLM-L-6-v2)
-- **Backend**: Custom RAG Pipeline
+- **Vector DB**: FAISS + BM25 (Hybrid Search)
+- **Structured DB**: SQLite + Pandas (for Student Data)
+- **Routing**: Regex-based Intent Detection
+- **Backend**: FastAPI (optional web server)
 
 ## Prerequisites
-
 - **OS**: Windows, Linux, or macOS
-- **Python**: 3.8, 3.9, 3.10, or 3.11 (Python 3.12+ may have issues with some ML libraries)
-- **RAM**: Minimum 8GB (16GB recommended)
-- **Disk Space**: ~2GB for models and data
+- **Python**: 3.8 - 3.11
+- **RAM**: Minimum 8GB recommended
 - **Software**: 
-  - [Ollama](https://ollama.com/) (Required for LLM)
+  - [Ollama](https://ollama.com/) (Required)
   - [Git](https://git-scm.com/)
 
 ## Setup Instructions
@@ -37,7 +37,6 @@ cd college-buddy
 ```
 
 ### 2. Create Virtual Environment
-It's critical to use a virtual environment to avoid conflicts.
 ```bash
 # Windows
 python -m venv .venv
@@ -53,113 +52,151 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Configure Ollama (Critical Step)
-The chatbot relies on Ollama running locally.
-1. Download and install [Ollama](https://ollama.com/).
-2. Open a terminal and pull the optimized model:
+### 4. Configure Ollama (Critical)
+1. Install [Ollama](https://ollama.com/).
+2. Pull the model:
    ```bash
-   ollama pull gemma3:1b
+   ollama pull gemma2:2b
    ```
-3. Keep Ollama running in the background.
+3. Keep Ollama running in the background (`ollama serve`).
 
 ### 5. Run the Chatbot
+You can run the chatbot in two modes:
+
+**Mode A: General Chat (RAG Only)**
 ```bash
 python terminal_chat.py
 ```
 
-## Troubleshooting
+**Mode B: Hybrid System (RAG + SQL)**
+*Recommended for full functionality*
+```bash
+python terminal_chat_hybrid.py
+```
 
-| Issue | Solution |
-|-------|----------|
-| **ConnectionRefusedError** | Ensure Ollama is running (`ollama serve` or check system tray). |
-| **Model not found** | Run `ollama pull gemma3:1b` to download the model. |
-| **Out of Memory** | Close other apps. The `gemma3:1b` model uses ~800MB RAM. |
-| **ImportError: DLL load failed** | Install MSVC runtime or reinstall `faiss-cpu`. |
+## Usage Examples
 
-## Data Flow
-1. **User Query** → `terminal_chat.py`
-2. **Hybrid Search** (`rag_system.py`):
-   - **Vector Search**: Finds semantically similar chunks (FAISS).
-   - **Keyword Search**: Finds exact matches (BM25).
-3. **Reranking**: Top 10 results are re-scored using a Cross-Encoder.
-4. **Prompt Building**: Best 5 chunks are formatted into a prompt.
-5. **Generation**: Prompt sent to Ollama (`gemma3:1b`) for final answer.
+### 🏢 General Queries (RAG)
+- "Who is the principal?"
+- "What are the college timings?"
+- "Tell me about CSE department facilities."
+- "How do I apply for admission?"
 
+### 🎓 Student Data Queries (SQL)
+- "List all students in CSE department"
+- "Show students with CGPA > 8.5"
+- "Who are the top recruiters?"
+- "How many students got placed in TCS?"
+- "What is the average CGPA of ECE students?"
+
+### 🔄 Hybrid Queries
+- "Show students with > 9.0 CGPA and tell me about the placement cell."
+
+## Architecture
+
+### System Architecture
+The College Buddy system follows a hybrid architecture combining Retrieval-Augmented Generation (RAG) with Structured Query Language (SQL) capabilities.
+
+```mermaid
+graph TD
+    User([User]) <--> Interface[Terminal Interface]
+    Interface <--> Router[Query Router]
+    
+    subgraph "Core Logic"
+        Router --> Detector[Intent Detector]
+        Detector -->|General| RAG[UltraRAG System]
+        Detector -->|Student| SQL[SQL System]
+        Detector -->|Hybrid| Fusion[Result Fusion]
+        
+        Fusion --> RAG
+        Fusion --> SQL
+    end
+    
+    subgraph "RAG Engine"
+        RAG <--> KB[Knowledge Base]
+        RAG <--> HybridSearch{Hybrid Search}
+        HybridSearch <--> FAISS[(FAISS Vector DB)]
+        HybridSearch <--> BM25[(BM25 Keyword DB)]
+        RAG --> LLM[Ollama (Gemma 2:2b)]
+    end
+    
+    subgraph "SQL Engine"
+        SQL <--> QueryBuilder[Query Builder]
+        QueryBuilder <--> SQLite[(Student Database)]
+        SQL --> Pandas[Pandas Analysis]
+    end
+```
+
+### Data Flow
+How a user query is processed and answered:
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant R as Router
+    participant I as Intent Detector
+    participant RS as RAG System
+    participant SS as SQL System
+    
+    U->>R: "How many CSE students got > 8.5 CGPA?"
+    R->>I: Analyze Query
+    I-->>R: Intent: "Student"
+    
+    R->>SS: Execute Query
+    SS->>SS: Extract Entities
+    SS->>SS: Build SQL
+    SS->>SS: Generate Summary
+    SS-->>R: Return Response
+    
+    R-->>U: "Summary: 45 students found..."
+    
+    Note over U,R: Hybrid Query Example
+    U->>R: "Show toppers and tell me about placements"
+    R->>I: Analyze Query
+    I-->>R: Intent: "Hybrid"
+    
+    par Parallel Processing
+        R->>SS: Get Toppers
+        R->>RS: Get Placement Info
+    end
+    
+    R->>R: Combine Results
+    R-->>U: "Here are the toppers... and placement info..."
+```
 
 ## Project Structure
-
-The project is organized into modular components for scalability and maintainability:
-
 ```
 college-buddy/
 ├── app/
 │   ├── services/
-│   │   ├── rag_system.py         # Core RAG pipeline (Search + Rerank + Generate)
-│   │   ├── chain.py              # Fallback logic & Chain of Thought generator
-│   │   ├── prompt_construction.py # Context-aware prompt engineering
-│   │   └── bm25_cache.py         # Caching for BM25 search index
-│   └── database/
-│       └── vectordb/
-│           ├── unified_vectors.json  # Master vector store (Text + Embeddings + Metadata)
-│           ├── faiss_index.bin       # FAISS index
-│           └── bm25_index.pkl        # BM25 index
+│   │   ├── ultra_rag.py           # General Info Engine (RAG)
+│   │   ├── sql_system.py          # Student Data Engine (SQL)
+│   │   ├── intent_detector.py     # Router Logic
+│   │   ├── query_router.py        # Main Controller
+│   │   └── chain.py               # Chain-of-Thought handling
+│   ├── database/
+│   │   ├── students.db            # SQLite Student DB
+│   │   └── vectordb/              # FAISS/BM25 Indices
 │
-├── docs/                         # Technical documentation
-│   ├── rag.md                    # RAG architecture details
-│   └── vector_db.md              # Vector database schema
-│
-├── terminal_chat.py              # Main Entry Point (Run this to start)
-└── requirements.txt              # Python dependencies
+├── terminal_chat.py               # RAG-only interface
+├── terminal_chat_hybrid.py        # Full Hybrid interface (Recommended)
+├── requirements.txt               # Dependencies
+└── README.md                      # Documentation
 ```
 
-## Component Details
+## Privacy & Security
+- **Student Data**: The SQL system is designed to provide *aggregate* summaries for general queries (e.g., "count of students") to protect privacy. Individual records are only shown for specific ID lookups.
+- **Local Processing**: All data stays on your local machine.
 
-### 1. RAG System (`app/services/rag_system.py`)
-The core engine uses a sophisticated **Hybrid Retrieval Pipeline**:
-- **Step 1: Query Processing**: The user's query is analyzed for clarity. If vague, the system asks for clarification.
-- **Step 2: Hybrid Search**:
-  - **Dense Vector Search**: Uses `sentence-transformers/all-MiniLM-L6-v2` to encode the query into a 384-dimensional vector. FAISS (`IndexFlatL2`) performs a nearest-neighbor search to retrieve the top 5 semantic matches.
-  - **Sparse Keyword Search**: Uses `rank_bm25` (Okapi BM25) to retrieve the top 5 exact keyword matches.
-- **Step 3: Reciprocal Rank Fusion (RRF)**: Results from FAISS and BM25 are combined to ensure both semantic understanding and keyword precision.
-- **Step 4: Reranking**: The top 10 fused results are passed to a Cross-Encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`), which scores each document-query pair. The top 5 highest-scoring chunks are selected for the context window.
-
-### 2. Fallback Mechanism (`app/services/chain.py`)
-A deterministic backup system designed for **100% reliability** when the LLM is unavailable.
-- **Query Classification**: Uses keyword matching to categorize queries into `person`, `timing`, `admission`, `contact`, or `general`.
-- **Pattern Extraction**:
-  - **Person Queries**: Scans for honorifics (`Dr.`, `Prof.`) and titles (`HOD`, `Principal`, `Dean`). It extracts full sentences containing these patterns to ensure context is preserved.
-  - **Timing/Contact**: Looks for specific markers like `:`, `am`, `pm`, `@`, `phone`.
-- **Response Generation**: Assembles extracted facts into a bulleted list, bypassing the generative model entirely.
-
-### 3. Vector Store (`app/database/vectordb/unified_vectors.json`)
-The centralized knowledge repository.
-- **Storage Format**: A 35MB+ JSON file containing over 2,000 text chunks.
-- **Schema**:
-  ```json
-  {
-    "chunk_id": "chunk_001",
-    "text": "Dr. A. Suresh Rao is the HOD of CSE...",
-    "embedding": [-0.023, 0.145, ...], // 384 floats
-    "metadata": { "source": "tkrcet.ac.in", "title": "Faculty" }
-  }
-  ```
-- **Performance**: Embeddings are loaded into a FAISS index in RAM for O(1) search complexity, while text is indexed by ID for O(1) retrieval.
-
-### 4. Prompt Engineering (`app/services/prompt_construction.py`)
-Uses **Dynamic Context Injection** to control LLM behavior.
-- **Anti-Hallucination Protocol**: For "Who is" queries, the system injects a strict system prompt:
-  > "CRITICAL: ONLY use names that appear in the context. DO NOT invent names. If you don't see a name, say you don't have that information."
-- **Context Formatting**: Retrieved chunks are formatted as bullet points with explicit separation to prevent information bleeding.
-- **Tone Control**: Instructions guide the LLM to be "friendly and conversational" for general queries, but "direct and factual" for official inquiries.
-
-## Team Roles
-- **Vijay Kiran**: RAG Architecture & System Integration
-- **Sanjana**: Data Pipeline & Chunking
-- **Subhash Chandra**: Embeddings & SQL
-- **Sathish**: Vector Database Optimization
+## Team
+- **Vijay Kiran**: System Architecture
+- **Sanjana**: Data Pipeline
+- **Subhash Chandra**: Database
+- **Sathish**: Vector Optimization
 - **Mokshagna**: LLM Integration
 - **Vishnuvardhan**: Prompt Engineering
-- **Praneetha**: Fine-Tuning & Evaluation
+- **Praneetha**: Testing
 
-## License
-This project is developed for academic purposes.
+---
+**Version**: 2.1 (Hybrid Edition)
+**Status**: Production Ready ✅

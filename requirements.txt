@@ -1,9 +1,22 @@
-# Core ML & NLP
-sentence-transformers==3.0.0  # For generating text embeddings
-faiss-cpu>=1.7.4              # Vector similarity search (CPU version)
-rank-bm25==0.2.2              # Keyword search for hybrid retrieval
-numpy>=1.24.0                 # Numerical operations
+# College Buddy - Requirements
+# Python 3.8+ required
 
-# Utilities
-requests>=2.31.0              # For API calls to Ollama
-tqdm>=4.66.0                  # Progress bars
+# Core Dependencies
+requests==2.31.0
+pathlib2==2.3.7.post1; python_version < '3.4'
+
+# Machine Learning & NLP
+sentence-transformers==3.0.1
+faiss-cpu==1.7.4
+rank-bm25==0.2.2
+codecarbon==2.2.4
+
+# Data Processing
+numpy==1.24.3
+pandas==2.0.3
+python-dateutil==2.8.2
+
+# FastAPI & Web Server
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0

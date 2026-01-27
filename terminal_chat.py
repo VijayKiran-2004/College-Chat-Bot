@@ -11,7 +11,7 @@ from pathlib import Path
 # Add app directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.services.rag_system import RAGSystem
+from app.services.ultra_rag import UltraRAGSystem
 
 
 class TerminalChatbot:
@@ -26,7 +26,7 @@ class TerminalChatbot:
         print()
         
         try:
-            self.rag = RAGSystem()
+            self.rag = UltraRAGSystem()
             self.running = True
             print("\n✓ Chatbot initialized successfully!")
             print("=" * 70)
@@ -71,12 +71,12 @@ class TerminalChatbot:
         print("SYSTEM STATUS")
         print("-" * 70)
         try:
-            num_chunks = len(self.rag.chunks)
-            print(f"✓ Knowledge Base: {num_chunks} chunks loaded")
+            num_docs = len(self.rag.documents)
+            print(f"✓ Knowledge Base: {num_docs} documents loaded")
             print(f"✓ Embedding Model: all-MiniLM-L6-v2")
-            print(f"✓ LLM Model: Gemma 3 1B (via Ollama)")
-            print(f"✓ Reranker: cross-encoder/ms-marco-MiniLM-L-6-v2")
-            print(f"✓ Conversation History: {len(self.rag.conversation_history)} messages")
+            print(f"✓ LLM Model: Gemma 3 4B (via Ollama)")
+            print(f"✓ Retrieval: Hybrid FAISS + BM25")
+            print(f"✓ System: UltraRAG v1.0.0")
             print("-" * 70 + "\n")
         except Exception as e:
             print(f"✗ Error getting status: {str(e)}\n")
