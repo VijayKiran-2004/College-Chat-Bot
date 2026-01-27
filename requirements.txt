@@ -1,22 +1,27 @@
 # College Buddy - Requirements
-# Python 3.8+ required
+# Python 3.9+ recommended
+--extra-index-url https://download.pytorch.org/whl/cpu
 
 # Core Dependencies
-requests==2.31.0
-pathlib2==2.3.7.post1; python_version < '3.4'
+requests>=2.31.0
 
 # Machine Learning & NLP
-sentence-transformers==3.0.1
-faiss-cpu==1.7.4
-rank-bm25==0.2.2
-codecarbon==2.2.4
+sentence-transformers>=3.0.1
+torch>=2.2.0
+torchvision>=0.17.0
+torchaudio>=2.2.0
+faiss-cpu>=1.7.4
+rank-bm25>=0.2.2
+codecarbon>=2.2.4
 
 # Data Processing
-numpy==1.24.3
-pandas==2.0.3
-python-dateutil==2.8.2
+# IMPORTANT: Keep numpy < 2.0.0 until all ML libraries support 2.0
+numpy<2.0.0
+pandas>=2.0.3
+python-dateutil>=2.8.2
 
 # FastAPI & Web Server
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
+fastapi>=0.104.1
+uvicorn>=0.24.0
+pydantic>=2.5.0
+

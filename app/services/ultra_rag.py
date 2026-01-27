@@ -14,6 +14,8 @@ if sys.platform.startswith('win'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 
+import os
+
 # ============================================================
 # KNOWLEDGE BASE - Instant answers for critical facts
 # ============================================================
@@ -60,7 +62,24 @@ KNOWLEDGE_BASE = {
     },
     "facilities": {
         "main": "State-of-the-art labs, smart classrooms, Wi-Fi campus, digital library, hostel (boys & girls), transport, sports ground, auditorium, NCC, incubation center, and medical facilities.",
-        "special": "Virtual labs, R&D center (21,000 sq ft), industry partnerships with ECIL and others."
+        "special": "Virtual labs, R&D center (21,000 sq ft), industry partnerships with ECIL and others.",
+        "transport": {
+            "details": "TKRCET provides a fleet of buses connecting all major parts of Hyderabad city to the campus. Transport is safe, reliable, and available for both students and staff.",
+            "routes": "Buses operate from Dilshuknagar, LB Nagar, Secunderabad, Uppal, Mehdipatnam, Kukatpally, and other key areas.",
+            "contact": "For specific route map and fee details, please visit the Transport Section in the Administrative Block."
+        }
+    },
+    "activities": {
+        "ncc": {
+            "name": "National Cadet Corps (NCC)",
+            "description": "TKRCET has a vibrant NCC unit (Army Wing) that instills discipline, patriotism, and leadership qualities in students. Cadets participate in regular drills, camps, and social service activities.",
+            "benefits": "NCC 'B' and 'C' certificates provide advantages in higher education admissions and government job selections (especially Defence)."
+        },
+        "nss": {
+            "name": "National Service Scheme (NSS)",
+            "description": "The NSS unit at TKRCET encourages students to serve the community through activities like blood donation camps, village adoption, tree plantation, and health awareness drives.",
+            "motto": "Not Me But You"
+        }
     },
     "accreditation": {
         "naac": "A+ Grade",
@@ -79,14 +98,17 @@ class UltraRAGSystem:
     def __init__(
         self,
         corpus_path='app/database/vectordb/corpus_ultrarag.jsonl',
-        ollama_model='gemma2:2b',  # Switched to 2B for 2x faster inference
-        ollama_url='http://localhost:11434/api/generate',
+        ollama_model=None,
+        ollama_url=None,
     ):
+        # Configuration from arguments or environment variables
+        self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'gemma2:2b')
+        self.ollama_url = ollama_url or os.environ.get('OLLAMA_URL', 'http://localhost:11434/api/generate')
+        
+        
         print("Initializing UltraRAG System...")
         
         self.corpus_path = corpus_path
-        self.ollama_model = ollama_model
-        self.ollama_url = ollama_url
         
         # Load corpus for retrieval
         self.documents = self._load_corpus()
@@ -200,12 +222,14 @@ class UltraRAGSystem:
         college_keywords = [
             'college', 'tkrcet', 'university', 'campus', 'admission', 'course', 'department',
             'principal', 'hod', 'dean', 'faculty', 'professor', 'teacher', 'staff',
-            'fee', 'placement', 'hostel', 'library', 'lab', 'facility', 'infrastructure',
+            'fee', 'placement', 'placed', 'job', 'recruit', 'company', 'companies', 'package',
+            'hostel', 'library', 'lab', 'facility', 'infrastructure', 'alumni',
             'exam', 'semester', 'academic', 'student', 'class', 'lecture', 'timing',
             'branch', 'cse', 'ece', 'eee', 'mech', 'civil', 'mba', 'btech', 'mtech',
             'naac', 'nba', 'aicte', 'jntuh', 'affiliation', 'accreditation',
             'transport', 'canteen', 'sports', 'club', 'event', 'fest', 'workshop',
-            'scholarship', 'eligibility', 'criteria', 'counseling', 'eapcet'
+            'scholarship', 'eligibility', 'criteria', 'counseling', 'eapcet',
+            'ncc', 'nss', 'cadet', 'service scheme'
         ]
         
         # Check if any college keyword is present
@@ -284,6 +308,20 @@ class UltraRAGSystem:
             pg = ', '.join(KNOWLEDGE_BASE['courses']['pg'])
             return f"TKRCET offers {KNOWLEDGE_BASE['courses']['total']}.\n\nUG Programs: {ug}\n\nPG Programs: {pg}"
         
+        if 'transport' in query_lower or 'bus' in query_lower:
+            t = KNOWLEDGE_BASE['facilities']['transport']
+            return f"**College Transport:**\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"
+
+        # NCC
+        if 'ncc' in query_lower or 'cadet' in query_lower:
+            ncc = KNOWLEDGE_BASE['activities']['ncc']
+            return f"**{ncc['name']}**\n\n{ncc['description']}\n\n**Benefits:** {ncc['benefits']}"
+
+        # NSS
+        if 'nss' in query_lower:
+            nss = KNOWLEDGE_BASE['activities']['nss']
+            return f"**{nss['name']}**\n\n{nss['description']}\n\n**Motto:** \"{nss['motto']}\""
+
         # Facilities
         if 'facilit' in query_lower or 'infrastructure' in query_lower or 'amenities' in query_lower:
             return f"{KNOWLEDGE_BASE['facilities']['main']}\n\nSpecial Features: {KNOWLEDGE_BASE['facilities']['special']}"

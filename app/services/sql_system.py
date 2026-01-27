@@ -35,7 +35,8 @@ class SQLSystem:
         # Extract branch (department)
         branches = ['ce', 'cse', 'ece', 'eee', 'me', 'it']
         for branch in branches:
-            if branch in query_lower:
+            # Use word boundary to avoid partial matches (e.g. 'placed' -> 'ce')
+            if re.search(r'\b' + branch + r'\b', query_lower):
                 entities['branch'] = branch.upper()
                 break
         
@@ -86,7 +87,8 @@ class SQLSystem:
         if conditions:
             base_query += " WHERE " + " AND ".join(conditions)
         
-        base_query += " LIMIT 50"  # Limit results
+        # Increased limit for better aggregation
+        base_query += " LIMIT 1000"
         return base_query
     
     def query_students(self, query):

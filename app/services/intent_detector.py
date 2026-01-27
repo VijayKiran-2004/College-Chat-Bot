@@ -11,7 +11,8 @@ class IntentDetector:
         self.student_keywords = [
             'student', 'students', 'cgpa', 'attendance', 
             'marks', 'grade', 'roll number', 'student id',
-            'name', 'section', 'year', 'batch', 'semester'
+            'name', 'section', 'year', 'batch', 'semester',
+            'companies', 'placed', 'recruiter', 'package'
         ]
         
         # Keywords that indicate general college queries

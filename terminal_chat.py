@@ -1,32 +1,39 @@
 #!/usr/bin/env python3
 """
 Terminal-based College Chatbot
-Interactive RAG system using Ollama Gemma 3N E2B model
+Hybrid RAG-SQL System using Ollama and SQLite
 """
 
 import sys
 import os
 from pathlib import Path
 
+# Fix for WinError 1114 (DLL initialization failed)
+# Must import sentence_transformers/torch BEFORE pandas/numpy to ensure correct DLL loading
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    pass
+
 # Add app directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.services.ultra_rag import UltraRAGSystem
+from app.services.query_router import QueryRouter
 
 
 class TerminalChatbot:
     """Interactive terminal chatbot interface"""
     
     def __init__(self):
-        """Initialize chatbot with RAG system"""
+        """Initialize chatbot with Hybrid RAG-SQL system"""
         print("\n" + "=" * 70)
-        print("COLLEGE CHATBOT - TERMINAL VERSION")
+        print("COLLEGE CHATBOT - HYBRID RAG-SQL SYSTEM")
         print("=" * 70)
         print("Initializing chatbot system...")
         print()
         
         try:
-            self.rag = UltraRAGSystem()
+            self.router = QueryRouter()
             self.running = True
             print("\n✓ Chatbot initialized successfully!")
             print("=" * 70)
@@ -34,7 +41,7 @@ class TerminalChatbot:
             print(f"\n✗ Error initializing chatbot: {str(e)}")
             print("Make sure:")
             print("  1. All data files are present")
-            print("  2. Ollama service is running: ollama run gemma3:1b")
+            print("  2. Ollama service is running: ollama run gemma2:2b")
             self.running = False
 
     def print_welcome(self):
@@ -43,11 +50,10 @@ class TerminalChatbot:
         print("Welcome to TKRCET College Assistant Chatbot")
         print("=" * 70)
         print("\nYou can ask questions about:")
-        print("  • Admission process and criteria")
-        print("  • College facilities and infrastructure")
-        print("  • Courses and academic programs")
-        print("  • Contact information")
-        print("  • Campus life and activities")
+        print("  • College information (principal, timings, facilities)")
+        print("  • Student data (CGPA, attendance, placements)")
+        print("  • Departments and courses")
+        print("  • Admissions and fees")
         print("\nType 'help' for available commands")
         print("Type 'exit' or 'quit' to exit")
         print("=" * 70 + "\n")
@@ -71,21 +77,19 @@ class TerminalChatbot:
         print("SYSTEM STATUS")
         print("-" * 70)
         try:
-            num_docs = len(self.rag.documents)
+            # Access internal components for status
+            rag = self.router.rag_system
+            sql = self.router.sql_system
+            
+            num_docs = len(rag.documents)
             print(f"✓ Knowledge Base: {num_docs} documents loaded")
             print(f"✓ Embedding Model: all-MiniLM-L6-v2")
-            print(f"✓ LLM Model: Gemma 3 4B (via Ollama)")
-            print(f"✓ Retrieval: Hybrid FAISS + BM25")
-            print(f"✓ System: UltraRAG v1.0.0")
+            print(f"✓ LLM Model: {rag.ollama_model} (via Ollama)")
+            print(f"✓ SQL Database: Connected to {sql.db_path}")
+            print(f"✓ Retrieval: Hybrid (FAISS + BM25) + SQL")
             print("-" * 70 + "\n")
         except Exception as e:
             print(f"✗ Error getting status: {str(e)}\n")
-
-    def format_answer(self, answer):
-        """Format answer for display (no truncation)"""
-        if not answer:
-            return "[No response generated]"
-        return answer
 
     def run(self):
         """Run the interactive chatbot"""
@@ -108,6 +112,7 @@ class TerminalChatbot:
                     print("\n" + "=" * 70)
                     print("Thank you for using TKRCET College Assistant!")
                     print("=" * 70 + "\n")
+                    self.router.close()
                     break
                 
                 elif user_input.lower() == 'help':
@@ -121,13 +126,15 @@ class TerminalChatbot:
                     self.print_status()
                 
                 else:
-                    # Process query through RAG system
+                    # Process query through Hybrid system
                     print("\nAssistant: ", end="", flush=True)
                     
                     try:
-                        answer = self.rag(user_input)
-                        formatted_answer = self.format_answer(answer)
-                        print(formatted_answer)
+                        # Direct call to router logic
+                        # We print a newline first because the router might print internal logs (rare but possible)
+                        # Actually router returns a string, so we just print it.
+                        answer = self.router(user_input)
+                        print(answer)
                     except Exception as e:
                         print(f"[Error processing query: {str(e)}]")
                     
@@ -137,6 +144,7 @@ class TerminalChatbot:
                 print("\n\n" + "=" * 70)
                 print("Chatbot interrupted. Goodbye!")
                 print("=" * 70 + "\n")
+                self.router.close()
                 break
             except Exception as e:
                 print(f"\n✗ Error: {str(e)}\n")

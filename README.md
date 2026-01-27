@@ -61,12 +61,16 @@ pip install -r requirements.txt
 3. Keep Ollama running in the background (`ollama serve`).
 
 ### 5. Run the Chatbot
-You can run the chatbot in two modes:
+The system is now fully consolidated into a single powerful interface:
 
 **For testing the bot in the terminal**
 ```bash
 python terminal_chat.py
 ```
+This single script handles everything:
+- **General Queries**: "Who is the principal?", "Tell me about NCC" (Routed to RAG)
+- **Student Analytics**: "How many students got placed?", "Top recruiters?" (Routed to SQL)
+- **Hybrid Queries**: "Show toppers and tell me about placement cell" (Routed to both)
 
 ## Usage Examples
 
@@ -165,8 +169,7 @@ college-buddy/
 │   │   ├── students.db            # SQLite Student DB
 │   │   └── vectordb/              # FAISS/BM25 Indices
 │
-├── terminal_chat.py               # RAG-only interface
-├── terminal_chat_hybrid.py        # Full Hybrid interface (Recommended)
+├── terminal_chat.py               # Consolidated Hybrid Interface
 ├── requirements.txt               # Dependencies
 └── README.md                      # Documentation
 ```
