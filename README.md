@@ -99,31 +99,32 @@ The College Buddy system follows a hybrid architecture combining Retrieval-Augme
 
 ```mermaid
 graph TD
-    User([User]) <--> Interface[Terminal Interface]
-    Interface <--> Router[Query Router]
+    User([User]) <--> Interface["Terminal Interface"]
+    Interface <--> Router["Query Router"]
     
     subgraph "Core Logic"
-        Router --> Detector[Intent Detector]
-        Detector -->|General| RAG[UltraRAG System]
-        Detector -->|Student| SQL[SQL System]
-        Detector -->|Hybrid| Fusion[Result Fusion]
+        Router --> Detector["Intent Detector"]
+        
+        Router -->|General| RAG["UltraRAG System"]
+        Router -->|Student| SQL["SQL System"]
+        Router -->|Hybrid| Fusion["Result Fusion"]
         
         Fusion --> RAG
         Fusion --> SQL
     end
     
     subgraph "RAG Engine"
-        RAG <--> KB[Knowledge Base]
-        RAG <--> HybridSearch{Hybrid Search}
-        HybridSearch <--> FAISS[(FAISS Vector DB)]
-        HybridSearch <--> BM25[(BM25 Keyword DB)]
-        RAG --> LLM[Ollama (Gemma 2:2b)]
+        RAG <--> KB["Knowledge Base"]
+        RAG <--> HybridSearch{"Hybrid Search"}
+        HybridSearch <--> FAISS[("FAISS Vector DB")]
+        HybridSearch <--> BM25[("BM25 Keyword DB")]
+        RAG --> LLM["Ollama (Gemma 2:2b)"]
     end
     
     subgraph "SQL Engine"
-        SQL <--> QueryBuilder[Query Builder]
-        QueryBuilder <--> SQLite[(Student Database)]
-        SQL --> Pandas[Pandas Analysis]
+        SQL <--> QueryBuilder["Query Builder"]
+        QueryBuilder <--> SQLite[("Student Database")]
+        SQL --> Pandas["Pandas Analysis"]
     end
 ```
 
