@@ -63,15 +63,9 @@ pip install -r requirements.txt
 ### 5. Run the Chatbot
 You can run the chatbot in two modes:
 
-**Mode A: General Chat (RAG Only)**
+**For testing the bot in the terminal**
 ```bash
 python terminal_chat.py
-```
-
-**Mode B: Hybrid System (RAG + SQL)**
-*Recommended for full functionality*
-```bash
-python terminal_chat_hybrid.py
 ```
 
 ## Usage Examples
