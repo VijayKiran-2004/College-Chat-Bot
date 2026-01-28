@@ -67,6 +67,12 @@ KNOWLEDGE_BASE = {
             "details": "TKRCET provides a fleet of buses connecting all major parts of Hyderabad city to the campus. Transport is safe, reliable, and available for both students and staff.",
             "routes": "Buses operate from Dilshuknagar, LB Nagar, Secunderabad, Uppal, Mehdipatnam, Kukatpally, and other key areas.",
             "contact": "For specific route map and fee details, please visit the Transport Section in the Administrative Block."
+        },
+        "canteen": {
+            "name": "College Canteen",
+            "description": "The college canteen provides hygienic food, snacks, and beverages at subsidized rates. It is a clean and spacious area where students can relax and refuel.",
+            "menu": "South Indian, North Indian, Chinese snacks, and beverages.",
+            "timings": "Open during college hours (including lunch break)."
         }
     },
     "activities": {
@@ -79,6 +85,12 @@ KNOWLEDGE_BASE = {
             "name": "National Service Scheme (NSS)",
             "description": "The NSS unit at TKRCET encourages students to serve the community through activities like blood donation camps, village adoption, tree plantation, and health awareness drives.",
             "motto": "Not Me But You"
+        },
+        "campus_life": {
+            "overview": "TKRCET offers a vibrant campus life with a perfect blend of academics and extra-curricular activities.",
+            "events": "Annual cultural fest 'SISIR', technical fest 'MEDHA', sports meets, and various club activities.",
+            "clubs": "Student clubs for coding, robotics, literature, photography, and music.",
+            "environment": "Ragging-free, eco-friendly, and safe campus environment."
         }
     },
     "accreditation": {
@@ -312,6 +324,10 @@ class UltraRAGSystem:
             t = KNOWLEDGE_BASE['facilities']['transport']
             return f"**College Transport:**\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"
 
+        if 'canteen' in query_lower or 'food' in query_lower or 'cafeteria' in query_lower:
+            c = KNOWLEDGE_BASE['facilities']['canteen']
+            return f"**{c['name']}**\n\n{c['description']}\n\n**Menu:** {c['menu']}\n**Timings:** {c['timings']}"
+
         # NCC
         if 'ncc' in query_lower or 'cadet' in query_lower:
             ncc = KNOWLEDGE_BASE['activities']['ncc']
@@ -321,6 +337,11 @@ class UltraRAGSystem:
         if 'nss' in query_lower:
             nss = KNOWLEDGE_BASE['activities']['nss']
             return f"**{nss['name']}**\n\n{nss['description']}\n\n**Motto:** \"{nss['motto']}\""
+
+        # Campus Life
+        if 'life' in query_lower or 'culture' in query_lower or 'events' in query_lower or 'fests' in query_lower or 'clubs' in query_lower:
+             cl = KNOWLEDGE_BASE['activities']['campus_life']
+             return f"**Campus Life at TKRCET**\n\n{cl['overview']}\n\n**Events:** {cl['events']}\n**Clubs:** {cl['clubs']}\n\n{cl['environment']}"
 
         # Facilities
         if 'facilit' in query_lower or 'infrastructure' in query_lower or 'amenities' in query_lower:
@@ -524,6 +545,8 @@ if __name__ == '__main__':
         "college timings?",
         "when was college established?",
         "what are the facilities?",
+        "tell me about the canteen",
+        "how is the campus life?",
     ]
     
     for query in test_queries:

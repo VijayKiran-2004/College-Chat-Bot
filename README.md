@@ -37,6 +37,12 @@ cd College-Chat-Bot
 ```
 
 ### 2. Create Virtual Environment
+> [!IMPORTANT]
+> You **MUST** go into the project folder first!
+> ```bash
+> cd College-Chat-Bot
+> ```
+
 ```bash
 # Windows
 python -m venv .venv
@@ -60,7 +66,14 @@ pip install -r requirements.txt
    ```
 3. Keep Ollama running in the background (`ollama serve`).
 
-### 5. Run the Chatbot
+### 5. First Time Setup (Run Once)
+You need to generate the vector database files before running the bot:
+```bash
+python scripts/corpus_converter.py
+```
+*(You will see a message: "Conversion complete! Output: .../corpus_ultrarag.jsonl")*
+
+### 6. Run the Chatbot
 The system is now fully consolidated into a single powerful interface:
 
 **For testing the bot in the terminal**
