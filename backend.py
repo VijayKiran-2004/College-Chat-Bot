@@ -11,11 +11,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import time
+from contextlib import asynccontextmanager
+from fastapi import Request
 
+# Add app directory to path
 # Add app directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.services.ultra_rag import UltraRAGSystem
+from app.services.query_router import QueryRouter
 
 
 # ============================================================
@@ -38,11 +42,60 @@ class QueryResponse(BaseModel):
 # FASTAPI APP SETUP
 # ============================================================
 
+# ============================================================
+# LIFESPAN & STARTUP
+# ============================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for startup and shutdown events
+    Measures and logs backend setup time.
+    """
+    print("\n" + "=" * 70)
+    print("COLLEGE BUDDY - STARTING UP")
+    start_time = time.time()
+    
+    # Initialize Systems
+    initialize_systems()
+    
+    elapsed = time.time() - start_time
+    print(f"✓ Backend initialized in {elapsed:.4f} seconds")
+    print("=" * 70 + "\n")
+    
+    yield
+    
+    # Shutdown logic (if any)
+    print("Shutting down...")
+
+
 app = FastAPI(
     title="College Buddy Backend",
     description="REST API for College Chatbot using UltraRAG",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
+
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    """
+    Middleware to measure request processing time
+    Adds 'X-Process-Time' header to response
+    """
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    
+    # Add header
+    response.headers["X-Process-Time"] = str(process_time)
+    
+    # Log slow requests
+    if process_time > 1.0:
+        print(f"⚠ Slow Request: {request.url.path} took {process_time:.4f}s")
+    else:
+        print(f"ℹ Request: {request.url.path} took {process_time:.4f}s")
+        
+    return response
 
 # Enable CORS for frontend communication
 app.add_middleware(
@@ -57,37 +110,32 @@ app.add_middleware(
 # GLOBAL STATE
 # ============================================================
 
-# Initialize UltraRAG system on startup
-rag_system = None
+# Initialize Router on startup
+query_router = None
 session_history = {}  # Store chat history by session_id
 
 
-def initialize_rag():
-    """Initialize UltraRAG system"""
-    global rag_system
+def initialize_systems():
+    """Initialize Query Router and subsystems"""
+    global query_router
     print("\n" + "=" * 70)
     print("COLLEGE BUDDY - BACKEND SERVER")
     print("=" * 70)
-    print("\nInitializing UltraRAG System...")
+    print("\nInitializing Systems...")
     try:
-        rag_system = UltraRAGSystem()
-        print("✓ UltraRAG System initialized successfully!")
+        query_router = QueryRouter()
+        print("✓ Query Router & Unified Brain initialized successfully!")
         return True
     except Exception as e:
-        print(f"✗ Error initializing UltraRAG: {e}")
+        print(f"✗ Error initializing systems: {e}")
         print("Make sure:")
-        print("  1. All data files are present in app/database/vectordb/")
+        print("  1. All data files are present")
         print("  2. Ollama is running: ollama serve")
         print("  3. Model is pulled: ollama pull gemma2:2b")
         return False
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Run on server startup"""
-    initialize_rag()
-    # Don't raise exception - allow server to start even if RAG initialization has issues
-    # The error messages will guide the user on what to fix
+ 
 
 
 # ============================================================
@@ -112,12 +160,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    if rag_system is None:
-        raise HTTPException(status_code=503, detail="UltraRAG system not initialized")
+    if query_router is None:
+        raise HTTPException(status_code=503, detail="Systems not initialized")
     
     return {
         "status": "healthy",
-        "rag_system": "ready",
+        "router": "ready",
         "sessions_active": len(session_history)
     }
 
@@ -136,10 +184,10 @@ async def chat(request: QueryRequest):
         - session_id: Session ID for this conversation
     """
     
-    if rag_system is None:
+    if query_router is None:
         raise HTTPException(
             status_code=503, 
-            detail="UltraRAG system not initialized. Please check the server logs and ensure all dependencies are installed."
+            detail="System not initialized. Please check the server logs and ensure all dependencies are installed."
         )
     
     # Validate message
@@ -162,8 +210,8 @@ async def chat(request: QueryRequest):
             "message": request.message
         })
         
-        # Generate response using UltraRAG
-        answer = rag_system(request.message)
+        # Generate response using Unified Query Router
+        answer = query_router.route_query(request.message)
         
         # Store bot response in history
         session_history[session_id].append({
@@ -176,7 +224,7 @@ async def chat(request: QueryRequest):
             session_history[session_id] = session_history[session_id][-100:]
         
         return QueryResponse(
-            answer=answer,
+            answer=str(answer),
             session_id=session_id
         )
     

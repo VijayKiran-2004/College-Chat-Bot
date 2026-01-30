@@ -147,6 +147,44 @@
         .animate-fade-in {
             animation: fadeIn 0.3s ease-out forwards;
         }
+
+        /* Suggestion Chips */
+        .suggestions-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .suggestion-chip {
+            background-color: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .suggestion-chip:hover {
+            background-color: #dbeafe;
+            transform: translateY(-1px);
+        }
+
+        .dark .suggestion-chip {
+            background-color: #1e293b;
+            color: #60a5fa;
+            border-color: #3b82f6;
+        }
+
+        .dark .suggestion-chip:hover {
+            background-color: #0f172a;
+        }
     </style>
 </head>
 
@@ -504,13 +542,55 @@
 
                     if (!isEmpty) {
                         // Normal behavior
-                        body.innerHTML = isHtml ? text : marked.parse(text);
+                        // body.innerHTML = isHtml ? text : marked.parse(text);
 
-                        // Trigger TTS if it's a new bot message (not history load)
-                        // Note: We might need a flag to distinguish history load vs live message
-                        // For now, let's assume this is mostly live. 
-                        // Actually, this function is called for history too.
-                        // We should call speakText separately in the receive handler
+                        // Parse Suggestions
+                        let formattedText = text;
+                        let suggestions = [];
+
+                        // Regex to find "Related Links:" block AND capture the list
+                        const linkRegex = /(?:Related Links:|Sources:|📌 Sources:)\s*\n((?:[-•*]\s+\[.*?\]\(.*?\)\n?)+)/i;
+                        const match = text.match(linkRegex);
+
+                        if (match) {
+                            // Extract links
+                            const list = match[1];
+                            const lines = list.split('\n');
+
+                            lines.forEach(line => {
+                                // Extract [Title](URL)
+                                const linkMatch = line.match(/\[(.*?)\]\((.*?)\)/);
+                                if (linkMatch) {
+                                    suggestions.push({
+                                        title: linkMatch[1],
+                                        url: linkMatch[2]
+                                    });
+                                }
+                            });
+
+                            // Remove the links block from text for display
+                            formattedText = text.replace(match[0], '').trim();
+                        }
+
+                        // Render Main Text
+                        body.innerHTML = isHtml ? formattedText : marked.parse(formattedText);
+
+                        // Render Suggestions/Links
+                        if (suggestions.length > 0) {
+                            const chipsDiv = document.createElement("div");
+                            chipsDiv.classList.add("suggestions-container");
+
+                            suggestions.forEach(item => {
+                                const chip = document.createElement("a");
+                                chip.classList.add("suggestion-chip");
+                                chip.textContent = "🔗 " + item.title;
+                                chip.href = item.url;
+                                chip.target = "_blank"; // Open in new tab
+                                chipsDiv.appendChild(chip);
+                            });
+
+                            body.appendChild(chipsDiv);
+                        }
                     }
 
                     bubble.appendChild(body);

@@ -94,12 +94,11 @@ ollama serve
 
 ### Wrong answers or off-topic responses
 ```bash
-# Delete cached indices to force rebuild
-Remove-Item app/database/vectordb/ultrarag_faiss.index
-Remove-Item app/database/vectordb/ultrarag_bm25.pkl
+# Re-run ingestion to refresh database
+python scripts/ingest.py
 
 # Restart chatbot
-python terminal_chat.py
+python backend.py
 ```
 
 ### Import errors
@@ -172,8 +171,11 @@ status
 ✓ Knowledge Base: 2029 documents loaded
 ✓ Embedding Model: all-MiniLM-L6-v2
 ✓ LLM Model: Gemma 2:2b (via Ollama)
-✓ Retrieval: Hybrid FAISS + BM25
-✓ System: UltraRAG v2.0
+✓ Knowledge Base: 2029 documents loaded
+✓ Embedding Model: all-MiniLM-L6-v2
+✓ LLM Model: Gemma 2:2b (via Ollama)
+✓ Retrieval: ChromaDB (Vector Search)
+✓ System: UltraRAG v3.0
 ```
 
 ---
@@ -198,5 +200,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 2.0  
+**Version**: 3.0
 **Last Updated**: January 2026

@@ -2,8 +2,9 @@
 Query Router - Intelligent routing between RAG and SQL systems
 """
 from app.services.intent_detector import IntentDetector
-from app.services.ultra_rag import UltraRAGSystem  # Using new UltraRAG system
+from app.services.ultra_rag import UltraRAGSystem
 from app.services.sql_system import SQLSystem
+from app.services.chain import DeepReasoningChain
 
 class QueryRouter:
     def __init__(self):
@@ -18,6 +19,13 @@ class QueryRouter:
         
         self.sql_system = SQLSystem()
         print("✓ SQL System loaded")
+        
+        # Initialize Deep Reasoning Chain with existing systems (Unified Brain)
+        self.reasoning_chain = DeepReasoningChain(
+            rag_system=self.rag_system,
+            sql_system=self.sql_system
+        )
+        print("✓ Deep Reasoning Chain loaded")
         
         print("✓ Query Router ready!\n")
     
@@ -43,18 +51,14 @@ class QueryRouter:
             return self.sql_system(query)
         
         elif intent == 'hybrid':
-            # Use both systems and combine results
-            rag_result = self.rag_system(query)
-            sql_result = self.sql_system(query)
-            
-            # Combine results intelligently
-            response = "Based on your query:\n\n"
-            response += f"**Student Data:**\n{sql_result}\n\n"
-            response += f"**College Information:**\n{rag_result}"
-            return response
+            # Use Deep Reasoning Chain for complex queries
+            print("  -> Routing to Agent (Deep Reasoning Chain)")
+            return self.reasoning_chain.run(query)
         
         else:
-            return "I couldn't understand your query. Please try rephrasing."
+            # Fallback to Agent if intent is unclear (Safety Net)
+            print("  -> Intent unclear, routing to Agent")
+            return self.reasoning_chain.run(query)
     
     def __call__(self, query):
         """Make class callable"""

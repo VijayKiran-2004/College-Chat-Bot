@@ -6,11 +6,19 @@ import sqlite3
 import pandas as pd
 import re
 
+import os
+import requests
+import json
+
 class SQLSystem:
-    def __init__(self, db_path='app/database/students.db'):
+    def __init__(self, db_path='app/database/students.db', ollama_model=None, ollama_url=None):
         """Initialize SQL system with student database"""
         self.db_path = db_path
-        self.conn = sqlite3.connect(db_path)
+        self.conn = sqlite3.connect(db_path, check_same_thread=False) # Helper for threading
+        
+        # Ollama Configuration
+        self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'gemma2:2b')
+        self.ollama_url = ollama_url or os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
         
         # Get table schema
         self.columns = self._get_columns()
@@ -56,12 +64,26 @@ class SQLSystem:
             entities['placed'] = False
         elif 'placed' in query_lower:
             entities['placed'] = True
+            
+        # Extract Gender
+        if re.search(r'\b(girl|girls|female|females|woman|women|ladies)\b', query_lower):
+            entities['gender'] = 'Female'
+        elif re.search(r'\b(boy|boys|male|males|man|men|guys)\b', query_lower):
+            entities['gender'] = 'Male'
+            
+        # Extract Average GPA intent
+        if 'average' in query_lower and ('gpa' in query_lower or 'cgpa' in query_lower):
+            entities['average_gpa'] = True
         
         return entities
     
     def build_sql_query(self, entities):
         """Build SQL query from extracted entities"""
-        base_query = "SELECT * FROM students"
+        if entities.get('average_gpa'):
+            base_query = "SELECT AVG(CGPA) as 'Average CGPA' FROM students"
+        else:
+            base_query = "SELECT * FROM students"
+            
         conditions = []
         
         if 'roll_no' in entities:
@@ -84,12 +106,71 @@ class SQLSystem:
             else:
                 conditions.append("(\"COMPANY PLACED\" IS NULL OR \"COMPANY PLACED\" = 'Not Placed')")
         
+        if 'gender' in entities:
+             conditions.append(f"GENDER = '{entities['gender']}'")
+        
         if conditions:
             base_query += " WHERE " + " AND ".join(conditions)
         
         # Increased limit for better aggregation
         base_query += " LIMIT 1000"
         return base_query
+
+    def _generate_sql(self, query):
+        """Generate SQL query using LLM"""
+        print(f"  [SQL] Generating SQL for: {query}")
+        
+        schema_desc = "\n".join([f'- "{col}"' for col in self.columns])
+        
+        # Add hint for Gender & Columns
+        hints = "GENDER values are 'Male' and 'Female'. 'COMPANY PLACED' contains company name or 'Not Placed'. To find placed students, check \"COMPANY PLACED\" != 'Not Placed'."
+        
+        prompt = f"""You are a SQL expert. Convert the user's natural language query into a valid SQLite query for the 'students' table.
+
+Table Schema (Exact Column Names):
+{schema_desc}
+
+Hints: {hints}
+
+Examples:
+1. User: "students with cgpa > 9"
+   SQL: SELECT * FROM students WHERE "CGPA" > 9 LIMIT 50
+2. User: "how many students passed in 2024?"
+   SQL: SELECT COUNT(*) FROM students WHERE "PASSED YEAR" = 2024
+3. User: "how many students are placed?"
+   SQL: SELECT COUNT(*) FROM students WHERE "COMPANY PLACED" IS NOT NULL AND "COMPANY PLACED" != 'Not Placed'
+
+Query: {query}
+
+Rules:
+1. Return ONLY the raw SQL query. No markdown, no explanations.
+2. ALWAYS quote all column names using double quotes (e.g., "PASSED YEAR" not PASSED_YEAR).
+3. Use LIMIT 50 for listings.
+4. No LIMIT for aggregations.
+
+SQL:"""
+        
+        try:
+            response = requests.post(
+                self.ollama_url,
+                json={
+                    "model": self.ollama_model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0.0} # Deterministic
+                },
+                timeout=30
+            )
+            if response.status_code == 200:
+                sql = response.json().get('response', '').strip()
+                # cleanup markdown if present
+                sql = re.sub(r'```sql', '', sql)
+                sql = re.sub(r'```', '', sql).strip()
+                return sql
+        except Exception as e:
+            print(f"⚠ LLM SQL Gen Error: {e}")
+            return None
+        return None
     
     def query_students(self, query):
         """
@@ -128,10 +209,14 @@ class SQLSystem:
         entities = self.extract_entities(query)
         
         if not entities:
-            return "I couldn't understand the student query. Please specify student ID, name, department, or conditions."
-        
-        # Build SQL query
-        sql_query = self.build_sql_query(entities)
+            # Fallback to Text-to-SQL if regex finds nothing
+            print("  [SQL] No entities found, trying Text-to-SQL...")
+            sql_query = self._generate_sql(query)
+            if not sql_query:
+                 return "I couldn't understand the student query. Please specify student ID, name, department, or conditions."
+        else:
+             # Build SQL query from regex entities
+             sql_query = self.build_sql_query(entities)
         
         try:
             # Execute query
@@ -139,6 +224,17 @@ class SQLSystem:
             
             if len(result_df) == 0:
                 return "No students found matching your criteria."
+            
+            # Handle Aggregation Results (COUNT, AVG, etc.)
+            if len(result_df) == 1 and len(result_df.columns) == 1:
+                col_name = result_df.columns[0]
+                value = result_df.iloc[0, 0]
+                
+                # Format floats (like Average GPA) to 2 decimal places
+                if isinstance(value, float):
+                    value = round(value, 2)
+                    
+                return f"Result: {value}"
             
             # PRIVACY: Only show aggregate data for general queries
             # Individual records only for specific student lookup
@@ -181,7 +277,27 @@ class SQLSystem:
                     response += f"• Branch-wise: {', '.join([f'{k}: {v}' for k, v in branches.items()])}\n"
                 
                 response += "\n(Individual student data is protected. Please contact administration for specific records.)"
-                return response
+                
+                # Append Related Links (Static Mapping)
+                links = "\n\nRelated Links:"
+                has_links = False
+                
+                if 'placed' in query.lower() or 'package' in query.lower() or 'company' in query.lower():
+                    links += "\n- [Placement Cell](https://tkrcet.ac.in/placement/)"
+                    has_links = True
+                
+                if 'exam' in query.lower() or 'result' in query.lower() or 'passed' in query.lower() or 'failed' in query.lower():
+                    links += "\n- [Exam Results Portal](https://tkrcet.ac.in/exam-branch/results/)"
+                    has_links = True
+                    
+                if 'fee' in query.lower() or 'payment' in query.lower():
+                    links += "\n- [Fee Payment](https://tkrcet.ac.in/payment/)"
+                    has_links = True
+                
+                if not has_links:
+                    links += "\n- [TKRCET Home](https://tkrcet.ac.in/)"
+                
+                return response + links
         
         except Exception as e:
             return f"Error querying database: {str(e)}"

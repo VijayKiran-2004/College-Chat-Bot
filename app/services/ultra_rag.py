@@ -16,6 +16,15 @@ if sys.platform.startswith('win'):
 
 import os
 
+# Fix for WinError 1114 (DLL Initialization Failed)
+# Must be set before importing libraries that use Torch/ChromaDB
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
+try:
+    import torch
+except ImportError:
+    pass # Torch might not be installed, but if it is, we need to load it early
+
 # ============================================================
 # KNOWLEDGE BASE - Instant answers for critical facts
 # ============================================================
@@ -47,8 +56,20 @@ KNOWLEDGE_BASE = {
     "history": {
         "established": "2002",
         "affiliation": "JNTUH (Jawaharlal Nehru Technological University Hyderabad)",
+        "status": "Autonomous (UGC confirmed)",
         "location": "Meerpet, Hyderabad - 500097, Telangana",
         "campus_size": "20 acres"
+    },
+    "society": {
+        "name": "TKR Educational Society",
+        "full_form": "Teegala Krishna Reddy",
+        "colleges": [
+            "TKR College of Engineering and Technology (TKRCET) - Autonomous",
+            "Teegala Krishna Reddy Engineering College (TKREC)",
+            "TKR College of Pharmacy (TKRCOP)",
+            "TKR Institute of Management and Science (TKRIMS)"
+        ],
+        "chairman": "Sri. Teegala Krishna Reddy"
     },
     "admissions": {
         "process": "Admissions are through TS EAPCET counseling for B.Tech, PGCET for M.Tech, and direct admission for MBA. Visit the admissions office or website for detailed procedure.",
@@ -97,6 +118,14 @@ KNOWLEDGE_BASE = {
         "naac": "A+ Grade",
         "nba": "NBA Accredited",
         "approvals": "AICTE approved, UGC recognized 2(f) & 12(B)"
+    },
+    "fees": {
+        "btech": "Tuition fee for B.Tech is approximately ₹85,000 - ₹1,00,000 per year (depending on the quota and branch).",
+        "mtech": "Tuition fee for M.Tech is approximately ₹57,000 per year.",
+        "mba": "Tuition fee for MBA is approximately ₹54,000 per year.",
+        "hostel": "Hostel fee is around ₹70,000 - ₹80,000 per year (including mess).",
+        "transport": "Transport fee varies by distance, ranging from ₹18,000 to ₹35,000 per year.",
+        "note": "Fees are subject to change as per government regulations. Contact accounts department for exact figures."
     }
 }
 
@@ -127,26 +156,27 @@ class UltraRAGSystem:
         print(f"✓ Loaded {len(self.documents)} documents")
         
         # Initialize retrieval components
+        self.collection = None # Default to None
         try:
-            from sentence_transformers import SentenceTransformer
-            from rank_bm25 import BM25Okapi
-            import faiss
-            import numpy as np
+            import chromadb
+            from chromadb.utils import embedding_functions
             
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            print("✓ Loaded embedding model")
+            print("Connecting to ChromaDB...")
+            self.chroma_client = chromadb.PersistentClient(path='app/database/vectordb/chroma')
             
-            # Build/load FAISS index
-            self.index = self._build_faiss_index()
-            print("✓ FAISS index ready")
+            # Use same embedding model as ingestion
+            ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
             
-            # Build/load BM25 index
-            self.bm25 = self._build_bm25_index()
-            print("✓ BM25 index ready")
+            self.collection = self.chroma_client.get_collection(
+                name="college_data",
+                embedding_function=ef
+            )
+            print("✓ Connected to ChromaDB")
             
         except Exception as e:
             print(f"⚠ Error initializing retrieval: {e}")
-            raise
+            print("Run 'python scripts/ingest.py' to populate the database.")
+            self.collection = None # Ensure it is None on failure
         
         # Test Ollama connection
         self.ollama_available = self._test_ollama()
@@ -154,62 +184,71 @@ class UltraRAGSystem:
         # Response cache for common queries
         self.response_cache = {}
         
-        print("✓ UltraRAG System ready!\n")
+        # Load SQL statistics into Knowledge Base
+        self._load_sql_stats()
+        
+        print("✓ UltraRAGSystem ready!\n")
+    
+    def _load_sql_stats(self):
+        """Load aggregate statistics from SQL database into Knowledge Base"""
+        try:
+            from app.services.sql_system import SQLSystem
+            import pandas as pd
+            sql = SQLSystem()
+            print("Loading SQL statistics...")
+            
+            # Total students
+            df_total = pd.read_sql_query("SELECT COUNT(*) as count FROM students", sql.conn)
+            total_students = df_total.iloc[0]['count']
+            
+            # Placed students
+            df_placed = pd.read_sql_query(
+                "SELECT COUNT(*) as count FROM students WHERE \"COMPANY PLACED\" IS NOT NULL AND \"COMPANY PLACED\" != 'Not Placed'", 
+                sql.conn
+            )
+            placed_count = df_placed.iloc[0]['count']
+            
+            # Top companies
+            df_companies = pd.read_sql_query(
+                """SELECT "COMPANY PLACED", COUNT(*) as count 
+                   FROM students 
+                   WHERE "COMPANY PLACED" IS NOT NULL AND "COMPANY PLACED" != 'Not Placed'
+                   GROUP BY "COMPANY PLACED"
+                   ORDER BY count DESC
+                   LIMIT 3""",
+                sql.conn
+            )
+            top_companies = ", ".join([f"{row['COMPANY PLACED']} ({row['count']})" for _, row in df_companies.iterrows()])
+            
+            # Inject into KNOWLEDGE_BASE
+            KNOWLEDGE_BASE['statistics'] = {
+                "total_students": str(total_students),
+                "placed_students": str(placed_count),
+                "top_recruiters": top_companies,
+                "placement_rate": f"{int((placed_count/total_students)*100)}%" if total_students > 0 else "N/A"
+            }
+            
+            sql.close()
+            print(f"✓ SQL Stats loaded: {total_students} students, {placed_count} placed")
+            
+        except Exception as e:
+            print(f"⚠ Could not load SQL stats: {e}")
+            # Fallback defaults
+            KNOWLEDGE_BASE['statistics'] = {
+                "total_students": "1600+",
+                "placed_students": "Many",
+                "top_recruiters": "TCS, Wipro, Infosys",
+                "placement_rate": "High"
+            }
     
     def _load_corpus(self):
-        """Load JSONL corpus"""
+        """Load corpus from JSONL file"""
         documents = []
         with open(self.corpus_path, 'r', encoding='utf-8') as f:
             for line in f:
                 doc = json.loads(line)
                 documents.append(doc)
         return documents
-    
-    def _build_faiss_index(self):
-        """Build or load FAISS index"""
-        import faiss
-        import numpy as np
-        
-        index_path = Path('app/database/vectordb/ultrarag_faiss.index')
-        
-        if index_path.exists():
-            return faiss.read_index(str(index_path))
-        
-        # Build new index
-        print("Building FAISS index...")
-        texts = [doc['contents'] for doc in self.documents]
-        embeddings = self.embedding_model.encode(texts, convert_to_tensor=False, show_progress_bar=True)
-        embeddings_np = np.asarray(embeddings, dtype=np.float32)  # type: ignore
-        
-        index = faiss.IndexFlatL2(embeddings_np.shape[1])
-        index.add(embeddings_np)  # type: ignore
-        
-        # Save index
-        faiss.write_index(index, str(index_path))
-        return index
-    
-    def _build_bm25_index(self):
-        """Build or load BM25 index"""
-        from rank_bm25 import BM25Okapi
-        import pickle
-        
-        bm25_path = Path('app/database/vectordb/ultrarag_bm25.pkl')
-        
-        if bm25_path.exists():
-            with open(bm25_path, 'rb') as f:
-                return pickle.load(f)
-        
-        # Build new BM25 index
-        print("Building BM25 index...")
-        corpus = [doc['contents'] for doc in self.documents]
-        tokenized_corpus = [doc.lower().split() for doc in corpus]
-        bm25 = BM25Okapi(tokenized_corpus)
-        
-        # Save index
-        with open(bm25_path, 'wb') as f:
-            pickle.dump(bm25, f)
-        
-        return bm25
     
     def _test_ollama(self):
         """Test Ollama connection"""
@@ -241,7 +280,8 @@ class UltraRAGSystem:
             'naac', 'nba', 'aicte', 'jntuh', 'affiliation', 'accreditation',
             'transport', 'canteen', 'sports', 'club', 'event', 'fest', 'workshop',
             'scholarship', 'eligibility', 'criteria', 'counseling', 'eapcet',
-            'ncc', 'nss', 'cadet', 'service scheme'
+            'ncc', 'nss', 'cadet', 'service scheme',
+            'syllabus', 'curriculum', 'subjects', 'exam'
         ]
         
         # Check if any college keyword is present
@@ -328,6 +368,11 @@ class UltraRAGSystem:
             c = KNOWLEDGE_BASE['facilities']['canteen']
             return f"**{c['name']}**\n\n{c['description']}\n\n**Menu:** {c['menu']}\n**Timings:** {c['timings']}"
 
+        # Fees
+        if 'fee' in query_lower or 'cost' in query_lower or 'payment' in query_lower:
+            f = KNOWLEDGE_BASE['fees']
+            return f"**Fee Structure (Approximate):**\n\n• **B.Tech:** {f['btech']}\n• **M.Tech:** {f['mtech']}\n• **MBA:** {f['mba']}\n\n• **Hostel:** {f['hostel']}\n• **Transport:** {f['transport']}\n\n_{f['note']}_"
+
         # NCC
         if 'ncc' in query_lower or 'cadet' in query_lower:
             ncc = KNOWLEDGE_BASE['activities']['ncc']
@@ -351,38 +396,58 @@ class UltraRAGSystem:
         if 'naac' in query_lower or 'nba' in query_lower or 'accredit' in query_lower or 'approved' in query_lower:
             return f"TKRCET is {KNOWLEDGE_BASE['accreditation']['naac']} accredited, {KNOWLEDGE_BASE['accreditation']['nba']}, and {KNOWLEDGE_BASE['accreditation']['approvals']}."
         
+        # Autonomous Status
+        if 'autonomous' in query_lower:
+            return f"Yes, TKRCET is an **Autonomous** institution affiliated to JNTUH. It has UGC confirmation for its autonomous status, allowing academic freedom in curriculum and evaluation."
+
+        # Society / Colleges
+        if 'society' in query_lower or 'colleges' in query_lower or 'institutions' in query_lower:
+            s = KNOWLEDGE_BASE['society']
+            colleges = "\n".join([f"{i+1}. {c}" for i, c in enumerate(s['colleges'])])
+            return f"The **{s['name']}** manages the following institutions:\n\n{colleges}"
+
+        # Full Form / Abbreviation
+        if 'full form' in query_lower or 'stand for' in query_lower or 'meaning of tkr' in query_lower:
+            if 'tkr' in query_lower:
+                return f"**TKR** stands for **{KNOWLEDGE_BASE['society']['full_form']}** (named after the founder and chairman, Sri. Teegala Krishna Reddy)."
+        
         return None
     
     def _hybrid_retrieve(self, query, top_k=5):
-        """Hybrid retrieval using FAISS + BM25"""
-        import numpy as np
-        
-        # FAISS semantic search
-        query_emb = self.embedding_model.encode(query, convert_to_tensor=False)
-        query_np = np.asarray([query_emb], dtype=np.float32)  # type: ignore
-        distances, indices = self.index.search(query_np, top_k * 2)  # type: ignore
-        
-        faiss_docs = [self.documents[idx] for idx in indices[0] if idx < len(self.documents)]
-        
-        # BM25 keyword search
-        tokenized_query = query.lower().split()
-        bm25_scores = self.bm25.get_scores(tokenized_query)
-        top_bm25_indices = np.argsort(bm25_scores)[-top_k*2:][::-1]
-        
-        bm25_docs = [self.documents[idx] for idx in top_bm25_indices if idx < len(self.documents)]
-        
-        # Merge and deduplicate
-        seen_ids = set()
-        merged_docs = []
-        
-        for doc in faiss_docs + bm25_docs:
-            if doc['id'] not in seen_ids:
-                seen_ids.add(doc['id'])
-                merged_docs.append(doc)
-                if len(merged_docs) >= top_k:
-                    break
-        
-        return merged_docs
+        """Retrieve using ChromaDB (Semantic Search)"""
+        if not self.collection:
+           print("⚠ Database not initialized, skipping retrieval")
+           return []
+           
+        try:
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=top_k
+            )
+            
+            docs = []
+            
+            # Chroma returns dict of lists, we need to restructure
+            # results['documents'][0] is list of chunks
+            # results['metadatas'][0] is list of metadata dicts
+            
+            if not results['documents']:
+                return []
+                
+            for i in range(len(results['documents'][0])):
+                content = results['documents'][0][i]
+                metadata = results['metadatas'][0][i] if results['metadatas'] else {}
+                
+                docs.append({
+                    "contents": content,
+                    "metadata": metadata
+                })
+            
+            return docs
+            
+        except Exception as e:
+            print(f"⚠ ChromaDB retrieval error: {e}")
+            return []
     
     def _extract_relevant_links(self, docs):
         """Extract unique, relevant URLs from retrieved documents"""
@@ -419,27 +484,19 @@ class UltraRAGSystem:
         else:
             lang_instruction = "Answer in English."
 
-        prompt = f"""You are the TKRCET College Assistant chatbot. You ONLY answer questions about TKRCET college.
+        prompt = f"""You are the TKRCET College Assistant chatbot. You primarily answer questions about TKRCET college, but you can be helpful with general queries as well.
 {lang_instruction}
 
-IMPORTANT: You must ONLY answer questions related to:
-- College information (admissions, courses, facilities, timings, location)
-- Personnel (Principal, HODs, faculty, staff)
-- Academic programs and departments
-- Campus facilities and infrastructure
-- Student services and activities
+GUIDELINES:
+- **Contextualize Everything**: ALWAYS interpret the user's question in the context of **TKRCET College**. For example, if they ask "what is the process?", assume they mean "TKRCET Admission Process".
+- **Typos**: Be tolerant of typos (e.g., "addmission", "fess").
+- **Primary Focus**: Prioritize answering questions about TKRCET (admissions, courses, facilities, personnel, etc.).
+- **student Data**: If the user asks about specific student data (placements, CGPA) and you don't have it in the context, suggest they ask for "student records" or "placement data" specifically so the system can look it up.
 
 FORMATTING RULES:
 - Use **bold** for key terms, names, and important numbers.
-- Use bullet points for lists (branches, facilities, steps).
-- Use clear headings or spacing for readability.
-- Keep output concise but visually structured.
-
-DO NOT answer questions about:
-- Mathematics, science, or academic subject content
-- General knowledge or trivia
-- Personal advice unrelated to college
-- Any topic outside TKRCET college domain
+- Use bullet points for lists.
+- Keep output concise and readable.
 
 Context Information:
 {kb_context}
@@ -448,9 +505,13 @@ Context Information:
 
 Student Question: {query}
 
-If the question is NOT about TKRCET college, respond with: "I'm sorry, I can only answer questions about TKRCET college. Please ask me about admissions, courses, facilities, or other college-related topics." (Translate this refusal message to {language} if needed).
+Your Answer:
+(Provide a helpful answer based on the context.)
 
-Your Answer:"""
+Student Question: {query}
+ 
+Your Answer:
+(Provide a helpful answer based on the context.)"""
         
         try:
             response = requests.post(
@@ -460,16 +521,18 @@ Your Answer:"""
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.1,  # Lower for faster, more deterministic responses
-                        "num_predict": 150,  # Reduced from 250 for faster generation
-                        "num_ctx": 1024      # Reduced from 2048 for 40% speed boost
+                        "temperature": 0.7,  # Increased for more natural conversation
+                        "top_k": 40,         # Balanced creativity
+                        "top_p": 0.9,        # Balanced coherence
+                        "num_predict": 250,  # Increased slightly for fuller answers
+                        "num_ctx": 2048      # Restored to standard context size
                     }
                 },
                 timeout=60
             )
             if response.status_code == 200:
                 answer = response.json().get('response', '').strip()
-                if answer and len(answer) > 10:
+                if answer:
                     # Add relevant navigation links
                     links = self._extract_relevant_links(docs)
                     if links:
@@ -497,8 +560,15 @@ Your Answer:"""
         lines.append(f"Principal: {kb['personnel']['principal']}")
         lines.append(f"Vice Principal: {kb['personnel']['vice_principal']}")
         lines.append(f"Timings: {kb['timings']['working_hours']}")
-        lines.append(f"Established: {kb['history']['established']}")
+        lines.append(f"Founded: {kb['history']['established']}")
         lines.append(f"Affiliation: {kb['history']['affiliation']}")
+        
+        if 'statistics' in kb:
+            stats = kb['statistics']
+            lines.append(f"\nFAST FACTS:")
+            lines.append(f"• Total Students: {stats['total_students']}")
+            lines.append(f"• Placed Students: {stats['placed_students']} (Rate: {stats['placement_rate']})")
+            lines.append(f"• Top Recruiters: {stats['top_recruiters']}")
         
         return "\n".join(lines)
     
@@ -514,8 +584,8 @@ Your Answer:"""
             return "Hello! I'm TKRCET College Assistant. How can I help you today? 😊"
         
         # Check if query is college-related
-        if not self._is_college_related(query):
-            return "I'm sorry, I can only answer questions about TKRCET college. Please ask me about admissions, courses, facilities, timings, faculty, or other college-related topics."
+        # if not self._is_college_related(query):
+        #     return "I'm sorry, I can only answer questions about TKRCET college. Please ask me about admissions, courses, facilities, timings, faculty, or other college-related topics."
         
         # Check knowledge base first
         kb_answer = self._check_knowledge_base(query)
@@ -527,6 +597,18 @@ Your Answer:"""
         
         # Generate response
         response = self._generate_response(query, docs, language)
+        
+        # Append Related Content Links
+        links = self._extract_relevant_links(docs)
+        if links:
+            response += "\n\nRelated Links:"
+            for link in links:
+                # Basic formatting check
+                if 'tkrcet' in link:
+                    title = "TKRCET Page"
+                else:
+                    title = "Source"
+                response += f"\n- [{title}]({link})"
         
         return response
 

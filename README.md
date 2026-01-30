@@ -15,7 +15,7 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 - **Language**: Python 3.8+
 - **LLM**: Google Gemma 2:2b (via Ollama)
 - **Embeddings**: all-MiniLM-L6-v2
-- **Vector DB**: FAISS + BM25 (Hybrid Search)
+- **Vector DB**: ChromaDB (Semantic Search)
 - **Structured DB**: SQLite + Pandas (for Student Data)
 - **Routing**: Regex-based Intent Detection
 - **Backend**: FastAPI (optional web server)
@@ -66,24 +66,27 @@ pip install -r requirements.txt
    ```
 3. Keep Ollama running in the background (`ollama serve`).
 
-### 5. First Time Setup (Run Once)
+### 5. First Time Setup (Populate Database)
 You need to generate the vector database files before running the bot:
 ```bash
-python scripts/corpus_converter.py
+python scripts/ingest.py
 ```
-*(You will see a message: "Conversion complete! Output: .../corpus_ultrarag.jsonl")*
+*(This will process web data and populate the `college_data` ChromaDB collection)*
 
 ### 6. Run the Chatbot
-The system is now fully consolidated into a single powerful interface:
 
-**For testing the bot in the terminal**
+**Option A: Backend API Server (Recommended)**
+Start the REST API server to power frontend applications:
+```bash
+python backend.py
+```
+*Server runs at `http://127.0.0.1:8000`*
+
+**Option B: Terminal Interface**
+For quick testing in the command line:
 ```bash
 python terminal_chat.py
 ```
-This single script handles everything:
-- **General Queries**: "Who is the principal?", "Tell me about NCC" (Routed to RAG)
-- **Student Analytics**: "How many students got placed?", "Top recruiters?" (Routed to SQL)
-- **Hybrid Queries**: "Show toppers and tell me about placement cell" (Routed to both)
 
 ## Usage Examples
 

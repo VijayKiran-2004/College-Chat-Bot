@@ -12,7 +12,8 @@ class IntentDetector:
             'student', 'students', 'cgpa', 'attendance', 
             'marks', 'grade', 'roll number', 'student id',
             'name', 'section', 'year', 'batch', 'semester',
-            'companies', 'placed', 'recruiter', 'package'
+            'companies', 'placed', 'recruiter', 'package',
+            'gpa', 'average'
         ]
         
         # Keywords that indicate general college queries
@@ -20,7 +21,8 @@ class IntentDetector:
             'college', 'department', 'hod', 'principal',
             'facility', 'library', 'hostel', 'admission',
             'fee', 'course', 'program', 'timings', 'contact',
-            'placement', 'faculty', 'dean', 'ncc', 'nss'
+            'placement', 'faculty', 'dean', 'ncc', 'nss',
+            'syllabus', 'curriculum', 'subjects', 'exam'
         ]
     
     def detect_intent(self, query):
