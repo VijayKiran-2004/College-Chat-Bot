@@ -22,11 +22,12 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 
 ## Prerequisites
 - **OS**: Windows, Linux, or macOS
-- **Python**: 3.8 - 3.11
+- **Python**: 3.9 - 3.11
 - **RAM**: Minimum 8GB recommended
 - **Software**: 
   - [Ollama](https://ollama.com/) (Required)
   - [Git](https://git-scm.com/)
+  - **Google Chrome** or **Chromium** (Required for Data Scraping)
 
 ## Setup Instructions
 
@@ -44,13 +45,15 @@ cd College-Chat-Bot
 > ```
 
 ```bash
-# Windows
+# Windows (PowerShell)
 python -m venv .venv
-.venv\Scripts\activate
+.\.venv\Scripts\Activate.ps1
 
 # Linux/Mac
 python3 -m venv .venv
 source .venv/bin/activate
+```
+*Note: If you see a security error in PowerShell, run `Set-ExecutionPolicy Unrestricted -Scope Process` first.*
 ```
 
 ### 3. Install Dependencies
@@ -66,14 +69,29 @@ pip install -r requirements.txt
    ```
 3. Keep Ollama running in the background (`ollama serve`).
 
-### 5. First Time Setup (Populate Database)
-You need to generate the vector database files before running the bot:
+### 5. Data Setup (Crucial Step)
+Since raw data is not checked into git, you must generate it locally:
+
+**A. Create Student Database (SQL)**
+```bash
+python scripts/setup_student_database.py
+```
+*Creates `app/database/students.db` from Excel data.*
+
+**B. Scrape College Data (Web)**
+```bash
+python scripts/scrape.py
+```
+*Scrapes 90+ pages from the college website to `app/database/vectordb/scraped_data.jsonl`. Requires Chrome.*
+
+### 6. Ingest Data (Vector DB)
+Now, process the scraped data into the Vector Database:
 ```bash
 python scripts/ingest.py
 ```
-*(This will process web data and populate the `college_data` ChromaDB collection)*
+*(This populates the `college_data` ChromaDB collection)*
 
-### 6. Run the Chatbot
+### 7. Run the Chatbot
 
 **Option A: Backend API Server (Recommended)**
 Start the REST API server to power frontend applications:
@@ -183,7 +201,7 @@ college-buddy/
 │   │   └── chain.py               # Chain-of-Thought handling
 │   ├── database/
 │   │   ├── students.db            # SQLite Student DB
-│   │   └── vectordb/              # FAISS/BM25 Indices
+│   │   └── vectordb/              # ChromaDB Storage
 │
 ├── terminal_chat.py               # Consolidated Hybrid Interface
 ├── requirements.txt               # Dependencies
