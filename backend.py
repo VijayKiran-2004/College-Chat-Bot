@@ -20,6 +20,10 @@ from fastapi import Request
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.services.query_router import QueryRouter
+from app.services.logger_service import ResponseLogger
+
+# Initialize global logger
+response_logger = None
 
 
 # ============================================================
@@ -117,12 +121,14 @@ session_history = {}  # Store chat history by session_id
 
 def initialize_systems():
     """Initialize Query Router and subsystems"""
-    global query_router
+    global query_router, response_logger
     print("\n" + "=" * 70)
     print("COLLEGE BUDDY - BACKEND SERVER")
     print("=" * 70)
     print("\nInitializing Systems...")
     try:
+        response_logger = ResponseLogger()
+        print("✓ Response Logger initialized")
         query_router = QueryRouter()
         print("✓ Query Router & Unified Brain initialized successfully!")
         return True
@@ -211,8 +217,23 @@ async def chat(request: QueryRequest):
         })
         
         # Generate response using Unified Query Router
+        start_time = time.time()
         answer = query_router.route_query(request.message)
+        end_time = time.time()
+        response_time = end_time - start_time
         
+        # Log the response
+        try:
+            if response_logger:
+                response_logger.log_response(
+                    user_query=request.message,
+                    bot_response=str(answer),
+                    time_taken=response_time,
+                    session_id=session_id
+                )
+        except Exception as log_err:
+            print(f"Logging failed: {log_err}")
+
         # Store bot response in history
         session_history[session_id].append({
             "role": "bot",

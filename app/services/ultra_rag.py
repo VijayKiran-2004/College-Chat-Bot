@@ -138,7 +138,7 @@ class UltraRAGSystem:
     
     def __init__(
         self,
-        corpus_path='app/database/vectordb/corpus_ultrarag.jsonl',
+        corpus_path=None,
         ollama_model=None,
         ollama_url=None,
     ):
@@ -146,10 +146,15 @@ class UltraRAGSystem:
         self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'gemma2:2b')
         self.ollama_url = ollama_url or os.environ.get('OLLAMA_URL', 'http://localhost:11434/api/generate')
         
+        # Calculate robust absolute paths
+        # Project root is 3 levels up from this file (app/services/ultra_rag.py -> app/services -> app -> root)
+        self.project_root = Path(__file__).resolve().parent.parent.parent
         
-        print("Initializing UltraRAG System...")
-        
-        self.corpus_path = corpus_path
+        # Default corpus path relative to project root
+        if corpus_path is None:
+            self.corpus_path = str(self.project_root / 'app/database/vectordb/corpus_ultrarag.jsonl')
+        else:
+            self.corpus_path = corpus_path
         
         # Load corpus for retrieval
         self.documents = self._load_corpus()
@@ -162,7 +167,8 @@ class UltraRAGSystem:
             from chromadb.utils import embedding_functions
             
             print("Connecting to ChromaDB...")
-            self.chroma_client = chromadb.PersistentClient(path='app/database/vectordb/chroma')
+            chroma_db_path = self.project_root / 'app/database/vectordb/chroma'
+            self.chroma_client = chromadb.PersistentClient(path=str(chroma_db_path))
             
             # Use same embedding model as ingestion
             ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
