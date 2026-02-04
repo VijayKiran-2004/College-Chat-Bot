@@ -91,6 +91,12 @@ python scripts/ingest.py
 ```
 *(This populates the `college_data` ChromaDB collection)*
 
+**Generate Knowledge Corpus:**
+```bash
+python scripts/corpus_converter.py
+```
+*(Specifices the JSONL corpus required for UltraRAG)*
+
 ### 7. Run the Chatbot
 
 **Option A: Backend API Server (Recommended)**
