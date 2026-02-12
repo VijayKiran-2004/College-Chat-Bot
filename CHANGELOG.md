@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.0] - January 2026
+## [3.0.0] - February 2026
+
+### Added
+- **Diagnostic Tool**: `verify_codebase.py` for comprehensive health checks.
+
+### Changed
+- **Documentation**: Unified versioning across all files to v3.0.0.
+- **Default Model**: Explicitly set to `llama3.2:3b` in codebase to match docs.
+
+## [2.1.0] - January 2026
 
 ### Added
 - **Scope Validation System**: Multi-layer filtering to reject non-college queries
@@ -67,5 +76,5 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-**Current Version**: 2.0.0  
+**Current Version**: 3.0.0  
 **Status**: Production Ready ✅

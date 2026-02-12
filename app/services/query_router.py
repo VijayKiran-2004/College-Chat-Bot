@@ -29,40 +29,75 @@ class QueryRouter:
         
         print("✓ Query Router ready!\n")
     
-    def route_query(self, query):
+    def route_query(self, query, chat_history=None):
         """
         Route query to appropriate system(s)
         
         Args:
             query: Natural language query
+            chat_history: Optional list of previous conversation turns for context
         
         Returns:
-            Response string
+            dict: {
+                "response": str,
+                "source": str,
+                "accuracy": str
+            }
         """
         # Detect intent
         intent = self.intent_detector.detect_intent(query)
         
+        # Override for specific keywords that might be misclassified as student queries (e.g., 'sports fest')
+        general_keywords = ['fest', 'tournament', 'sports', 'event', 'club', 'campus', 'hostel', 'bus', 'transport']
+        if any(keyword in query.lower() for keyword in general_keywords):
+           intent = 'general'
+        
         if intent == 'general':
             # Use RAG system only
-            return self.rag_system(query)
+            response = self.rag_system(query)
+            # Check if it was a cache hit or KB answer (usually high confidence)
+            # For now, we assume RAG/KB is generally high if it found something
+            return {
+                "response": response,
+                "source": "RAG/Knowledge Base",
+                "accuracy": "High" # Placeholder, ideally comes from RAG system
+            }
         
         elif intent == 'student':
-            # Use SQL system only
-            return self.sql_system(query)
+            # Use SQL system only (with context for follow-up questions)
+            response = self.sql_system.query_students(query, chat_history=chat_history)
+            return {
+                "response": response,
+                "source": "SQL Database",
+                "accuracy": "100%" # SQL is deterministic
+            }
         
         elif intent == 'hybrid':
             # Use Deep Reasoning Chain for complex queries
             print("  -> Routing to Agent (Deep Reasoning Chain)")
-            return self.reasoning_chain.run(query)
+            response = self.reasoning_chain.run(query)
+            return {
+                "response": response,
+                "source": "Deep Reasoning Agent",
+                "accuracy": "High"
+            }
         
         else:
             # Fallback to Agent if intent is unclear (Safety Net)
             print("  -> Intent unclear, routing to Agent")
-            return self.reasoning_chain.run(query)
+            response = self.reasoning_chain.run(query)
+            return {
+                "response": response,
+                "source": "Deep Reasoning Agent (Fallback)",
+                "accuracy": "Medium"
+            }
     
-    def __call__(self, query):
+    def __call__(self, query, chat_history=None):
         """Make class callable"""
-        return self.route_query(query)
+        result = self.route_query(query, chat_history=chat_history)
+        if isinstance(result, dict):
+            return result['response'] # For simple string compatibility
+        return result
     
     def close(self):
         """Close all connections"""

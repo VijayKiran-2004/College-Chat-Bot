@@ -6,14 +6,14 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 ## Key Features
 - 🧠 **Hybrid Architecture**: Intelligently routes queries to either **UltraRAG** (general info) or **SQL System** (tabular data).
 - 📊 **Student Data Analysis**: Can answer complex queries about student performance, placements, and departments (e.g., "List top 5 companies", "How many students got > 8.5 CGPA?").
-- 🤖 **Efficient LLM**: Powered by **Gemma 2:2b** via Ollama, optimized for speed on local hardware.
+- 🤖 **Efficient LLM**: Powered by **Llama 3.2:3b** via Ollama, optimized for speed on local hardware.
 - 🛡️ **Scope Validation**: Built-in filtering to reject non-college queries.
 -  **Knowledge Base**: Instant answers for critical facts (personnel, timings, location).
 - ⚡ **Fast & Lightweight**: Runs efficiently on local hardware with minimal memory footprint.
 
 ## Tech Stack
 - **Language**: Python 3.8+
-- **LLM**: Google Gemma 2:2b (via Ollama)
+- **LLM**: Llama 3.2:3b (via Ollama)
 - **Embeddings**: all-MiniLM-L6-v2
 - **Vector DB**: ChromaDB (Semantic Search)
 - **Structured DB**: SQLite + Pandas (for Student Data)
@@ -65,7 +65,7 @@ pip install -r requirements.txt
 1. Install [Ollama](https://ollama.com/).
 2. Pull the model:
    ```bash
-   ollama pull gemma2:2b
+   ollama pull llama3.2:3b
    ```
 3. Keep Ollama running in the background (`ollama serve`).
 
@@ -151,7 +151,7 @@ graph TD
     RAG <--> KB[Knowledge Base]
     RAG <--> HybridSearch{Hybrid Search}
     HybridSearch <--> VectorDB[(Vector DB)]
-    RAG --> LLM[Ollama Gemma Model]
+    RAG --> LLM[Ollama Llama Model]
     
     SQL <--> QueryBuilder[Query Builder]
     QueryBuilder <--> DB[(Student DB)]
@@ -210,6 +210,7 @@ college-buddy/
 │   │   └── vectordb/              # ChromaDB Storage
 │
 ├── terminal_chat.py               # Consolidated Hybrid Interface
+├── verify_codebase.py             # Diagnostic Tool
 ├── requirements.txt               # Dependencies
 └── README.md                      # Documentation
 ```
@@ -228,5 +229,5 @@ college-buddy/
 - **Praneetha**: Testing
 
 ---
-**Version**: 2.1 (Hybrid Edition)
+**Version**: 3.0.0 (Hybrid Edition)
 **Status**: Production Ready ✅

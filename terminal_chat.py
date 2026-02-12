@@ -41,7 +41,7 @@ class TerminalChatbot:
             print(f"\n✗ Error initializing chatbot: {str(e)}")
             print("Make sure:")
             print("  1. All data files are present")
-            print("  2. Ollama service is running: ollama run gemma2:2b")
+            print("  2. Ollama service is running: ollama run llama3.2:3b")
             self.running = False
 
     def print_welcome(self):

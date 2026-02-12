@@ -9,9 +9,9 @@ We added a diagnostic tool to check your environment automatically.
 1. Open a terminal in the project folder.
 2. Run:
    ```powershell
-   python verify_setup.py
+   python verify_codebase.py
    ```
-3. Look for ❌ marks in the output.
+3. Look for `[FAILED]` marks in the output.
 
 ---
 
@@ -59,22 +59,22 @@ We updated `requirements.txt` to be more flexible.
 *   **First Run Delay:** The first query takes longer because the model loads from disk. Wait a minute and try again.
 *   **Pre-load the model:** Run this in a separate terminal:
     ```powershell
-    ollama run gemma2:2b ""
+    ollama run llama3.2:3b ""
     ```
     This forces the model to load into memory *before* you start the backend.
 
 ---
 
 ### 4. "Model not found"
-**Error:** `model 'gemma2:2b' not found`
+**Error:** `model 'llama3.2:3b' not found`
 
 **Fix:**
 Your teammate might not have the specific model installed.
-*   Run: `ollama pull gemma2:2b`
+*   Run: `ollama pull llama3.2:3b`
 *   **OR** use a different model by setting an Environment Variable:
     ```powershell
     # Windows PowerShell
-    $env:OLLAMA_MODEL="llama2"
+    $env:OLLAMA_MODEL="llama3.2"
     python backend.py
     ```
 
@@ -82,5 +82,5 @@ Your teammate might not have the specific model installed.
 
 ## 🐛 Still stuck?
 
-1. Send the output of `python verify_setup.py` to the team.
+1. Send the output of `python verify_codebase.py` to the team.
 2. Check `backend.log` if it exists.

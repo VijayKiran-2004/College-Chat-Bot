@@ -117,6 +117,7 @@ app.add_middleware(
 # Initialize Router on startup
 query_router = None
 session_history = {}  # Store chat history by session_id
+session_timeout_count = {}  # Track timeout retries per session
 
 
 def initialize_systems():
@@ -137,7 +138,7 @@ def initialize_systems():
         print("Make sure:")
         print("  1. All data files are present")
         print("  2. Ollama is running: ollama serve")
-        print("  3. Model is pulled: ollama pull gemma2:2b")
+        print("  3. Model is pulled: ollama pull llama3.2:3b")
         return False
 
 
@@ -216,9 +217,58 @@ async def chat(request: QueryRequest):
             "message": request.message
         })
         
-        # Generate response using Unified Query Router
+        # Prepare chat history context (last 3 turns)
+        recent_history = session_history[session_id][-6:] if len(session_history[session_id]) > 0 else []
+        
+        # Generate response using Unified Query Router with timeout
         start_time = time.time()
-        answer = query_router.route_query(request.message)
+        
+        # Default metadata
+        response_source = "Unknown"
+        response_accuracy = "N/A"
+        
+        try:
+            # Import here to avoid circular dependency
+            import requests
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+            
+            # Run query_router in a thread with timeout
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(query_router.route_query, request.message, recent_history)
+                try:
+                    result = future.result(timeout=70)  # 70 second timeout
+                    
+                    # Handle dictionary response (new format)
+                    if isinstance(result, dict):
+                        answer = result.get('response',str(result))
+                        response_source = result.get('source', 'Unknown')
+                        response_accuracy = result.get('accuracy', 'N/A')
+                    else:
+                        # Fallback for old format
+                        answer = str(result)
+                        
+                    # Reset timeout count on success
+                    if session_id in session_timeout_count:
+                        session_timeout_count[session_id] = 0
+                except FuturesTimeoutError:
+                    # Track timeout attempts
+                    session_timeout_count[session_id] = session_timeout_count.get(session_id, 0) + 1
+                    
+                    if session_timeout_count[session_id] == 1:
+                        # First timeout - helpful message
+                        answer = "I'm taking a bit too long to think about that. Could you try asking in a simpler way?"
+                    else:
+                        # Second+ timeout - respectful denial
+                        answer = "I apologize, but I'm having trouble processing this question right now. Please try a different question or contact the college office for immediate assistance."
+                        # Reset counter after second timeout
+                        session_timeout_count[session_id] = 0
+                    
+                    response_source = "System"
+                    response_accuracy = "Timeout"
+        except Exception as query_error:
+            print(f"Query execution error: {query_error}")
+            answer = "I encountered an error while processing your question. Please try again or rephrase your question."
+        
         end_time = time.time()
         response_time = end_time - start_time
         
@@ -229,7 +279,9 @@ async def chat(request: QueryRequest):
                     user_query=request.message,
                     bot_response=str(answer),
                     time_taken=response_time,
-                    session_id=session_id
+                    session_id=session_id,
+                    source=response_source,
+                    accuracy=response_accuracy
                 )
         except Exception as log_err:
             print(f"Logging failed: {log_err}")

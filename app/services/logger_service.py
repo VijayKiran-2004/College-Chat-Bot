@@ -21,13 +21,28 @@ class ResponseLogger:
         if not self.log_dir.exists():
             self.log_dir.mkdir(parents=True, exist_ok=True)
             
+        columns = ["Timestamp", "User Query", "Bot Response", "Time Taken (s)", "Session ID", "Source", "Accuracy"]
+            
         if not self.log_file.exists():
             wb = Workbook()
             ws = wb.active
-            ws.append(["Timestamp", "User Query", "Bot Response", "Time Taken (s)", "Session ID"])
+            ws.append(columns)
             wb.save(self.log_file)
+        else:
+            # Check if columns need updating
+            try:
+                wb = load_workbook(self.log_file)
+                ws = wb.active
+                headers = [cell.value for cell in ws[1]]
+                
+                if "Source" not in headers:
+                    ws.cell(row=1, column=len(headers)+1, value="Source")
+                    ws.cell(row=1, column=len(headers)+2, value="Accuracy")
+                    wb.save(self.log_file)
+            except Exception as e:
+                print(f"Error checking log file headers: {e}")
 
-    def log_response(self, user_query, bot_response, time_taken, session_id="N/A"):
+    def log_response(self, user_query, bot_response, time_taken, session_id="N/A", source="N/A", accuracy="N/A"):
         """
         Log a query and response pair to the Excel file.
         
@@ -36,6 +51,8 @@ class ResponseLogger:
             bot_response (str): The bot's generated response.
             time_taken (float): Time taken to generate the response in seconds.
             session_id (str): The session identifier.
+            source (str): Source of the answer (RAG/SQL/KB).
+            accuracy (str): Confidence score or accuracy metric.
         """
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -45,12 +62,12 @@ class ResponseLogger:
                 wb = load_workbook(self.log_file)
                 ws = wb.active
             else:
-                wb = Workbook()
+                self._ensure_log_file()
+                wb = load_workbook(self.log_file)
                 ws = wb.active
-                ws.append(["Timestamp", "User Query", "Bot Response", "Time Taken (s)", "Session ID"])
             
             # Append new row
-            ws.append([timestamp, user_query, bot_response, f"{time_taken:.4f}", session_id])
+            ws.append([timestamp, user_query, bot_response, f"{time_taken:.4f}", session_id, source, accuracy])
             
             wb.save(self.log_file)
         except Exception as e:

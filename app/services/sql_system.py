@@ -172,9 +172,13 @@ SQL:"""
             return None
         return None
     
-    def query_students(self, query):
+    def query_students(self, query, chat_history=None):
         """
         Execute natural language query on student database
+        
+        Args:
+            query: Natural language query
+            chat_history: Optional list of previous conversation turns for context
         
         Examples:
         - "What is the CGPA of student 12345?"
@@ -182,8 +186,27 @@ SQL:"""
         - "Show students with CGPA > 8.5"
         - "Find student named John Doe"
         """
-        # Special case: top companies query
         query_lower = query.lower()
+        
+        # Context-aware follow-up question handling
+        if chat_history and len(chat_history) > 0:
+            # Check if this is a follow-up question (e.g., "which companies?", "how many?")
+            follow_up_indicators = ['which', 'what about', 'how many of them', 'from them', 'those']
+            is_follow_up = any(indicator in query_lower for indicator in follow_up_indicators)
+            
+            if is_follow_up and len(query.split()) < 6:  # Short questions are likely follow-ups
+                # Look for previous placement/student query in history
+                for turn in reversed(chat_history[-4:]):  # Check last 4 turns
+                    if turn.get('role') == 'user':
+                        prev_query = turn.get('message', '').lower()
+                        # If previous query was about placements, append context
+                        if any(kw in prev_query for kw in ['placed', 'placement', 'company', 'students']):
+                            query = f"{prev_query} {query}"  # Merge context
+                            query_lower = query.lower()
+                            print(f"  [SQL Context] Merged with previous query: {query}")
+                            break
+        
+        # Special case: top companies query
         if 'companies' in query_lower or 'recruiter' in query_lower:
             try:
                 df = pd.read_sql_query(
@@ -302,9 +325,9 @@ SQL:"""
         except Exception as e:
             return f"Error querying database: {str(e)}"
     
-    def __call__(self, query):
+    def __call__(self, query, chat_history=None):
         """Make class callable"""
-        return self.query_students(query)
+        return self.query_students(query, chat_history=chat_history)
     
     def close(self):
         """Close database connection"""

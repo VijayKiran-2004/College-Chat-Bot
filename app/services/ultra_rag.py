@@ -126,6 +126,12 @@ KNOWLEDGE_BASE = {
         "hostel": "Hostel fee is around ₹70,000 - ₹80,000 per year (including mess).",
         "transport": "Transport fee varies by distance, ranging from ₹18,000 to ₹35,000 per year.",
         "note": "Fees are subject to change as per government regulations. Contact accounts department for exact figures."
+    },
+    "exam_info": {
+        "exam_schedule": "Exam schedules are announced by the Examination Branch. Please check the college notice board, website, or contact your department for specific dates.",
+        "exam_timings": "Exam timings vary by semester and course. Please refer to the exam timetable published by the college on the notice board or website.",
+        "recent_events": "For information about recent or upcoming events, please check the college website, notice boards, or contact the Student Activities Office.",
+        "upcoming_events": "For information about upcoming events, please check the college website, notice boards, or contact the Student Activities Office."
     }
 }
 
@@ -143,7 +149,7 @@ class UltraRAGSystem:
         ollama_url=None,
     ):
         # Configuration from arguments or environment variables
-        self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'gemma2:2b')
+        self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'llama3.2:3b')
         self.ollama_url = ollama_url or os.environ.get('OLLAMA_URL', 'http://localhost:11434/api/generate')
         
         # Calculate robust absolute paths
@@ -189,6 +195,13 @@ class UltraRAGSystem:
         
         # Response cache for common queries
         self.response_cache = {}
+        
+        # Initialize KB semantic matching
+        print("Building KB semantic index...")
+        from sentence_transformers import SentenceTransformer
+        self.kb_encoder = SentenceTransformer('all-MiniLM-L6-v2')
+        self._build_kb_index()
+        print("✓ KB semantic index ready")
         
         # Load SQL statistics into Knowledge Base
         self._load_sql_stats()
@@ -314,111 +327,201 @@ class UltraRAGSystem:
         
         return False
     
+    def _build_kb_index(self):
+        """Pre-compute embeddings for all KB entries for semantic matching"""
+        import numpy as np
+        
+        self.kb_entries = []
+        self.kb_embeddings = []
+        
+        def flatten_kb(data, category="", parent_key=""):
+            """Recursively flatten nested KB structure"""
+            for key, value in data.items():
+                current_key = f"{parent_key}.{key}" if parent_key else key
+                
+                if isinstance(value, dict):
+                    # Recursively flatten nested dicts
+                    flatten_kb(value, category or key, current_key)
+                elif isinstance(value, list):
+                    # Handle lists (like colleges list)
+                    text_value = ", ".join(str(item) for item in value)
+                    search_text = f"{category} {key} {text_value}"
+                    self.kb_entries.append({
+                        'category': category or key,
+                        'key': key,
+                        'value': text_value,
+                        'search_text': search_text
+                    })
+                elif isinstance(value, str):
+                    # Create searchable text combining category, key, and value
+                    search_text = f"{category} {key} {value}"
+                    self.kb_entries.append({
+                        'category': category or key,
+                        'key': key,
+                        'value': value,
+                        'search_text': search_text
+                    })
+        
+        # Flatten the KB
+        flatten_kb(KNOWLEDGE_BASE)
+        
+        # Compute embeddings for all entries
+        search_texts = [entry['search_text'] for entry in self.kb_entries]
+        self.kb_embeddings = self.kb_encoder.encode(search_texts, show_progress_bar=False)
+        self.kb_embeddings = np.array(self.kb_embeddings)
+    
     def _check_knowledge_base(self, query):
-        """Check if query can be answered from knowledge base"""
+        """KB matching with keyword fallback + semantic matching"""
+        import numpy as np
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        if len(self.kb_entries) == 0:
+            return None
+        
         query_lower = query.lower()
         
-        # Personnel queries
-        if 'principal' in query_lower and 'vice' not in query_lower:
-            return f"The Principal of TKRCET is {KNOWLEDGE_BASE['personnel']['principal']}."
-        
-        if 'vice principal' in query_lower:
-            return f"The Vice Principal is {KNOWLEDGE_BASE['personnel']['vice_principal']}."
-        
-        if 'secretary' in query_lower:
-            return f"The Secretary of TKRCET is {KNOWLEDGE_BASE['personnel']['secretary']}."
-        
-        if 'chairman' in query_lower:
-            return f"The Chairman of TKRCET is {KNOWLEDGE_BASE['personnel']['chairman']}."
-        
-        if 'founder' in query_lower:
-            return f"The Founder of TKRCET is {KNOWLEDGE_BASE['personnel']['chairman']} (Founder Chairman of TKR Educational Society)."
-        
-        if 'dean' in query_lower:
-            return f"The Dean of Academics is {KNOWLEDGE_BASE['personnel']['dean_academics']}."
-        
-        if 'hod' in query_lower or 'head of department' in query_lower:
-            for dept, hod in KNOWLEDGE_BASE['personnel']['hod'].items():
-                if dept in query_lower:
-                    return f"The HOD of {dept.upper()} is {hod}."
+        # ============================================================
+        # EXPLICIT KEYWORD MATCHING (guaranteed instant responses)
+        # ============================================================
         
         # Timings
-        if 'timing' in query_lower or 'hours' in query_lower or 'time' in query_lower:
-            return f"College timings: {KNOWLEDGE_BASE['timings']['working_hours']}. Lunch break: {KNOWLEDGE_BASE['timings']['lunch_break']}."
+        if any(word in query_lower for word in ['timing', 'timings', 'hours', 'schedule', 'time table', 'timetable']):
+            lunch = KNOWLEDGE_BASE['timings'].get('lunch_break', '')
+            hours = KNOWLEDGE_BASE['timings']['working_hours']
+            return f"**College Timings:**\n\n🕐 {hours}\n\n**Lunch Break:** {lunch}"
         
-        # History & Location
-        if 'established' in query_lower or 'founded' in query_lower or 'started' in query_lower:
-            return f"TKRCET was established in {KNOWLEDGE_BASE['history']['established']} on a {KNOWLEDGE_BASE['history']['campus_size']} campus in {KNOWLEDGE_BASE['history']['location']}."
+        # Address/Location
+        if any(word in query_lower for word in ['address', 'location', 'where is', 'where are']):
+            h = KNOWLEDGE_BASE['history']
+            return f"**TKRCET Location:**\n\n📍 {h['location']}\n\n**Established:** {h['established']}\n**Affiliation:** {h['affiliation']}\n**Status:** {h['status']}\n**Campus Size:** {h['campus_size']}"
         
-        if 'affiliation' in query_lower or 'affiliated' in query_lower:
-            return f"TKRCET is affiliated to {KNOWLEDGE_BASE['history']['affiliation']}."
+        # Fee Structure (comprehensive)
+        if 'fee' in query_lower and ('structure' in query_lower or 'how much' in query_lower or 'cost' in query_lower):
+            f = KNOWLEDGE_BASE['fees']
+            return f"**Fee Structure (Approximate):**\n\n• **B.Tech:** {f['btech']}\n• **M.Tech:** {f['mtech']}\n• **MBA:** {f['mba']}\n\n• **Hostel:** {f['hostel']}\n• **Transport:** {f['transport']}\n\n_{f['note']}_"
         
-        if 'location' in query_lower or 'address' in query_lower or 'where' in query_lower:
-            return f"TKRCET is located at {KNOWLEDGE_BASE['history']['location']}."
+        # Fee Payment
+        if 'fee' in query_lower and ('pay' in query_lower or 'payment' in query_lower):
+            return "**Fee Payment:**\n\nFees can be paid at the Accounts Department in the Administrative Block. Payment modes include:\n• Cash\n• Demand Draft\n• Online Transfer\n\nFor detailed payment procedures, please contact the Accounts Department or visit the college office."
         
-        # Admissions
-        if 'admission' in query_lower or 'apply' in query_lower or 'join' in query_lower:
-            return f"{KNOWLEDGE_BASE['admissions']['process']} Eligibility: {KNOWLEDGE_BASE['admissions']['eligibility']} {KNOWLEDGE_BASE['admissions']['contact']}"
+        # Transport
+        if any(word in query_lower for word in ['transport', 'bus', 'buses', 'route']):
+            t = KNOWLEDGE_BASE['facilities']['transport']
+            return f"**College Transport:**\n\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"
         
-        # Courses
-        if 'course' in query_lower or 'program' in query_lower or 'branch' in query_lower or 'department' in query_lower:
+        # Canteen
+        if 'canteen' in query_lower or 'food' in query_lower:
+            c = KNOWLEDGE_BASE['facilities']['canteen']
+            return f"**{c['name']}**\n\n{c['description']}\n\n**Menu:** {c['menu']}\n**Timings:** {c['timings']}"
+        
+        # ============================================================
+        # SEMANTIC MATCHING (for other queries)
+        # ============================================================
+        
+        # Encode query
+        query_embedding = self.kb_encoder.encode([query], show_progress_bar=False)
+        
+        # Compute cosine similarities
+        similarities = cosine_similarity(query_embedding, self.kb_embeddings)[0]
+        
+        # Find best match
+        best_idx = np.argmax(similarities)
+        best_score = similarities[best_idx]
+        
+        # Confidence threshold
+        CONFIDENCE_THRESHOLD = 0.55  # Lowered from 0.70 for better coverage
+        
+        if best_score < CONFIDENCE_THRESHOLD:
+            return None  # Let RAG handle it
+        
+        # Get matched entry
+        matched_entry = self.kb_entries[best_idx]
+        category = matched_entry['category']
+        key = matched_entry['key']
+        value = matched_entry['value']
+        
+        # Format response based on category
+        if category == 'personnel':
+            if key == 'principal':
+                return f"The Principal of TKRCET is {value}."
+            elif key == 'vice_principal':
+                return f"The Vice Principal is {value}."
+            elif key == 'secretary':
+                return f"The Secretary of TKRCET is {value}."
+            elif key == 'chairman':
+                return f"The Chairman of TKRCET is {value}."
+            elif key == 'dean_academics':
+                return f"The Dean of Academics is {value}."
+            elif 'hod' in key:
+                dept = key.split('.')[-1] if '.' in key else key
+                return f"The HOD of {dept.upper()} is {value}."
+            else:
+                return value
+        
+        elif category == 'timings':
+            if key == 'working_hours':
+                lunch = KNOWLEDGE_BASE['timings'].get('lunch_break', '')
+                return f"College timings: {value}. Lunch break: {lunch}."
+            else:
+                return value
+        
+        elif category == 'history' or key in ['location', 'established', 'affiliation', 'status', 'campus_size']:
+            # Handle location/address queries
+            h = KNOWLEDGE_BASE['history']
+            if key == 'location' or 'address' in query.lower() or 'where' in query.lower():
+                return f"**TKRCET Location:**\n\n📍 {h['location']}\n\n**Established:** {h['established']}\n**Affiliation:** {h['affiliation']}\n**Status:** {h['status']}\n**Campus Size:** {h['campus_size']}"
+            elif key == 'established':
+                return f"TKRCET was established in **{value}**."
+            elif key == 'affiliation':
+                return f"TKRCET is affiliated to **{value}**."
+            elif key == 'status':
+                return f"TKRCET has **{value}** status."
+            else:
+                return value
+        
+        elif category == 'transport' or 'transport' in key:
+            t = KNOWLEDGE_BASE['facilities']['transport']
+            return f"**College Transport:**\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"
+        
+        elif category == 'canteen' or 'canteen' in key:
+            c = KNOWLEDGE_BASE['facilities']['canteen']
+            return f"**{c['name']}**\n\n{c['description']}\n\n**Menu:** {c['menu']}\n**Timings:** {c['timings']}"
+        
+        elif category == 'campus_life' or key == 'events' or key == 'clubs':
+            cl = KNOWLEDGE_BASE['activities']['campus_life']
+            return f"**Campus Life at TKRCET**\n\n{cl['overview']}\n\n**Events:** {cl['events']}\n**Clubs:** {cl['clubs']}\n\n{cl['environment']}"
+        
+        elif category == 'ncc':
+            ncc = KNOWLEDGE_BASE['activities']['ncc']
+            return f"**{ncc['name']}**\n\n{ncc['description']}\n\n**Benefits:** {ncc['benefits']}"
+        
+        elif category == 'nss':
+            nss = KNOWLEDGE_BASE['activities']['nss']
+            return f"**{nss['name']}**\n\n{nss['description']}\n\n**Motto:** \"{nss['motto']}\""
+        
+        elif category == 'society' or key == 'colleges':
+            s = KNOWLEDGE_BASE['society']
+            colleges = "\n".join([f"{i+1}. {c}" for i, c in enumerate(s['colleges'])])
+            return f"The **{s['name']}** manages the following institutions:\n\n{colleges}"
+        
+        elif category == 'courses':
             ug = ', '.join(KNOWLEDGE_BASE['courses']['ug'])
             pg = ', '.join(KNOWLEDGE_BASE['courses']['pg'])
             return f"TKRCET offers {KNOWLEDGE_BASE['courses']['total']}.\n\nUG Programs: {ug}\n\nPG Programs: {pg}"
         
-        if 'transport' in query_lower or 'bus' in query_lower:
-            t = KNOWLEDGE_BASE['facilities']['transport']
-            return f"**College Transport:**\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"
-
-        if 'canteen' in query_lower or 'food' in query_lower or 'cafeteria' in query_lower:
-            c = KNOWLEDGE_BASE['facilities']['canteen']
-            return f"**{c['name']}**\n\n{c['description']}\n\n**Menu:** {c['menu']}\n**Timings:** {c['timings']}"
-
-        # Fees
-        if 'fee' in query_lower or 'cost' in query_lower or 'payment' in query_lower:
+        elif category == 'fees' or 'fee' in key:
             f = KNOWLEDGE_BASE['fees']
             return f"**Fee Structure (Approximate):**\n\n• **B.Tech:** {f['btech']}\n• **M.Tech:** {f['mtech']}\n• **MBA:** {f['mba']}\n\n• **Hostel:** {f['hostel']}\n• **Transport:** {f['transport']}\n\n_{f['note']}_"
-
-        # NCC
-        if 'ncc' in query_lower or 'cadet' in query_lower:
-            ncc = KNOWLEDGE_BASE['activities']['ncc']
-            return f"**{ncc['name']}**\n\n{ncc['description']}\n\n**Benefits:** {ncc['benefits']}"
-
-        # NSS
-        if 'nss' in query_lower:
-            nss = KNOWLEDGE_BASE['activities']['nss']
-            return f"**{nss['name']}**\n\n{nss['description']}\n\n**Motto:** \"{nss['motto']}\""
-
-        # Campus Life
-        if 'life' in query_lower or 'culture' in query_lower or 'events' in query_lower or 'fests' in query_lower or 'clubs' in query_lower:
-             cl = KNOWLEDGE_BASE['activities']['campus_life']
-             return f"**Campus Life at TKRCET**\n\n{cl['overview']}\n\n**Events:** {cl['events']}\n**Clubs:** {cl['clubs']}\n\n{cl['environment']}"
-
-        # Facilities
-        if 'facilit' in query_lower or 'infrastructure' in query_lower or 'amenities' in query_lower:
-            return f"{KNOWLEDGE_BASE['facilities']['main']}\n\nSpecial Features: {KNOWLEDGE_BASE['facilities']['special']}"
         
-        # Accreditation
-        if 'naac' in query_lower or 'nba' in query_lower or 'accredit' in query_lower or 'approved' in query_lower:
-            return f"TKRCET is {KNOWLEDGE_BASE['accreditation']['naac']} accredited, {KNOWLEDGE_BASE['accreditation']['nba']}, and {KNOWLEDGE_BASE['accreditation']['approvals']}."
+        elif category == 'exam_info':
+            # Return the specific exam info value
+            return value
         
-        # Autonomous Status
-        if 'autonomous' in query_lower:
-            return f"Yes, TKRCET is an **Autonomous** institution affiliated to JNTUH. It has UGC confirmation for its autonomous status, allowing academic freedom in curriculum and evaluation."
+        else:
+            # Default: return the value as-is
+            return value
 
-        # Society / Colleges
-        if 'society' in query_lower or 'colleges' in query_lower or 'institutions' in query_lower:
-            s = KNOWLEDGE_BASE['society']
-            colleges = "\n".join([f"{i+1}. {c}" for i, c in enumerate(s['colleges'])])
-            return f"The **{s['name']}** manages the following institutions:\n\n{colleges}"
 
-        # Full Form / Abbreviation
-        if 'full form' in query_lower or 'stand for' in query_lower or 'meaning of tkr' in query_lower:
-            if 'tkr' in query_lower:
-                return f"**TKR** stands for **{KNOWLEDGE_BASE['society']['full_form']}** (named after the founder and chairman, Sri. Teegala Krishna Reddy)."
-        
-        return None
-    
     def _hybrid_retrieve(self, query, top_k=5):
         """Retrieve using ChromaDB (Semantic Search)"""
         if not self.collection:
@@ -476,6 +579,9 @@ class UltraRAGSystem:
     def _generate_response(self, query, docs, language='en'):
         """Generate response using Ollama with retrieved context"""
         
+        # Extract links first for Quick Links section
+        links = self._extract_relevant_links(docs)
+        
         # Build context from retrieved documents
         context = "\n\n".join([f"• {doc['contents'][:400]}" for doc in docs[:3]])
         
@@ -490,34 +596,48 @@ class UltraRAGSystem:
         else:
             lang_instruction = "Answer in English."
 
-        prompt = f"""You are the TKRCET College Assistant chatbot. You primarily answer questions about TKRCET college, but you can be helpful with general queries as well.
+        prompt = f"""Hey! You're the friendly TKRCET College Buddy 😊 - think of yourself as a helpful senior student who knows everything about the college.
 {lang_instruction}
 
+YOUR PERSONALITY:
+- Be warm, friendly, and conversational (like chatting with a friend)
+- Use casual language but stay professional
+- Show enthusiasm about TKRCET!
+- Be understanding of typos and unclear questions
+
 GUIDELINES:
-- **Contextualize Everything**: ALWAYS interpret the user's question in the context of **TKRCET College**. For example, if they ask "what is the process?", assume they mean "TKRCET Admission Process".
-- **Typos**: Be tolerant of typos (e.g., "addmission", "fess").
-- **Primary Focus**: Prioritize answering questions about TKRCET (admissions, courses, facilities, personnel, etc.).
-- **student Data**: If the user asks about specific student data (placements, CGPA) and you don't have it in the context, suggest they ask for "student records" or "placement data" specifically so the system can look it up.
+- **Context is Key**: Always assume questions are about TKRCET. "What's the process?" = "TKRCET admission process"
+- **Be Helpful**: If you don't have exact info, guide them to the right resource or office
+- **Keep it Natural**: Avoid robotic responses - talk like a real person!
 
-FORMATTING RULES:
-- Use **bold** for key terms, names, and important numbers.
-- Use bullet points for lists.
-- Keep output concise and readable.
+FORMATTING:
+- Use **bold** for important names and numbers
+- Use bullet points for lists
+- **Keep answers SHORT and concise** (2-3 sentences max unless listing items)
+- Get straight to the point
 
-Context Information:
+What I Know About TKRCET:
 {kb_context}
 
+Relevant Info:
 {context}
 
-Student Question: {query}
+Student's Question: {query}
 
-Your Answer:
-(Provide a helpful answer based on the context.)
-
-Student Question: {query}
- 
-Your Answer:
-(Provide a helpful answer based on the context.)"""
+Your Friendly Response:"""
+        
+        # Build Quick Links section (appears at top)
+        quick_links_section = ""
+        if links:
+            quick_links_section = "📌 **Quick Links:**\n"
+            for link in links:
+                # Format link with title
+                if 'tkrcet' in link.lower():
+                    title = "TKRCET Official Page"
+                else:
+                    title = "Related Resource"
+                quick_links_section += f"• [{title}]({link})\n"
+            quick_links_section += "\n"
         
         try:
             response = requests.post(
@@ -527,35 +647,40 @@ Your Answer:
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.7,  # Increased for more natural conversation
+                        "temperature": 0.7,  # Natural conversation
                         "top_k": 40,         # Balanced creativity
                         "top_p": 0.9,        # Balanced coherence
-                        "num_predict": 250,  # Increased slightly for fuller answers
-                        "num_ctx": 2048      # Restored to standard context size
+                        "num_predict": 120,  # Reduced for faster responses (was 200)
+                        "num_ctx": 1024      # Reduced context window for speed (was 1536)
                     }
                 },
-                timeout=60
+                timeout=70  # Aligned with backend's 70s timeout
             )
             if response.status_code == 200:
                 answer = response.json().get('response', '').strip()
                 if answer:
-                    # Add relevant navigation links
-                    links = self._extract_relevant_links(docs)
+                    # Build final response: Quick Links + Answer + Source Links
+                    final_response = quick_links_section + answer
+                    
+                    # Add Source Links at the bottom
                     if links:
-                        answer += "\n\n📌 Related Links:\n"
+                        final_response += "\n\n📚 **Source Links:**\n"
                         for link in links:
-                            answer += f"• {link}\n"
-                    return answer
+                            final_response += f"• {link}\n"
+                    
+                    return final_response
         except Exception as e:
             print(f"⚠ Ollama error: {e}")
         
         # Fallback to document snippets with links
-        fallback = f"Here's what I found:\n\n{context}"
-        links = self._extract_relevant_links(docs)
+        fallback = quick_links_section + f"Here's what I found:\n\n{context}"
+        
+        # Add Source Links at the bottom for fallback too
         if links:
-            fallback += "\n\n📌 Related Links:\n"
+            fallback += "\n\n📚 **Source Links:**\n"
             for link in links:
                 fallback += f"• {link}\n"
+        
         return fallback
     
     def _format_kb_context(self):
@@ -585,17 +710,28 @@ Your Answer:
             return "Please enter a question."
         
         # Greetings
-        greetings = ['hi', 'hello', 'hey', 'how are you', 'how r u', 'how are u', 'whats up', "what's up"]
-        if any(greeting == query.lower() for greeting in greetings):
-            return "Hello! I'm TKRCET College Assistant. How can I help you today? 😊"
+        # Greetings (Flexible Regex Matching)
+        import re
+        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]*$"
         
-        # Check if query is college-related
-        # if not self._is_college_related(query):
-        #     return "I'm sorry, I can only answer questions about TKRCET college. Please ask me about admissions, courses, facilities, timings, faculty, or other college-related topics."
+        if re.match(greetings_pattern, query.lower()):
+            return "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today?"
+        
+        # Check cache first (for exact query matches)
+        query_key = query.lower().strip()
+        if query_key in self.response_cache:
+            print("  [Cache Hit] Returning cached response")
+            return self.response_cache[query_key]
         
         # Check knowledge base first
         kb_answer = self._check_knowledge_base(query)
         if kb_answer:
+            # Cache knowledge base answers
+            self.response_cache[query_key] = kb_answer
+            # Limit cache size to 50 entries
+            if len(self.response_cache) > 50:
+                # Remove oldest entry (FIFO)
+                self.response_cache.pop(next(iter(self.response_cache)))
             return kb_answer
         
         # Retrieve relevant documents
@@ -604,17 +740,8 @@ Your Answer:
         # Generate response
         response = self._generate_response(query, docs, language)
         
-        # Append Related Content Links
-        links = self._extract_relevant_links(docs)
-        if links:
-            response += "\n\nRelated Links:"
-            for link in links:
-                # Basic formatting check
-                if 'tkrcet' in link:
-                    title = "TKRCET Page"
-                else:
-                    title = "Source"
-                response += f"\n- [{title}]({link})"
+        # Links are now handled inside _generate_response() method
+        # No need to add them here to avoid duplication
         
         return response
 

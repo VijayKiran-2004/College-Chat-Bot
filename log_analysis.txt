@@ -1,0 +1,44 @@
+Total queries logged: 15
+
+================================================================================
+
+Queries taking > 50 seconds: 2 queries
+
+================================================================================
+
+Time: 73.88s
+Query: what are the college timings?
+Source: System
+Timestamp: 2026-02-12 13:20:21
+--------------------------------------------------------------------------------
+
+Time: 73.14s
+Query: whats the address of the college?
+Source: System
+Timestamp: 2026-02-12 12:54:35
+--------------------------------------------------------------------------------
+
+
+Statistics for slow queries:
+Average time: 73.51s
+Max time: 73.88s
+Min time: 73.14s
+
+
+All query times:
+              Timestamp                         User Query  Time Taken (s)              Source
+0   2026-02-12 12:51:05                                 hi          0.8429  RAG/Knowledge Base
+1   2026-02-12 12:51:10                              hello          0.0033  RAG/Knowledge Base
+2   2026-02-12 12:51:19                        how are you          0.2471  RAG/Knowledge Base
+3   2026-02-12 12:51:54       how many girls were placed ?          0.4554        SQL Database
+4   2026-02-12 12:54:35  whats the address of the college?         73.1448              System
+5   2026-02-12 12:55:40                           try agin         24.8249  RAG/Knowledge Base
+6   2026-02-12 12:59:01       college timings and address?         42.1619  RAG/Knowledge Base
+7   2026-02-12 13:17:40                                 hi          0.0108  RAG/Knowledge Base
+8   2026-02-12 13:17:51         how many boys were placed?          0.5018        SQL Database
+9   2026-02-12 13:20:21      what are the college timings?         73.8812              System
+10  2026-02-12 13:22:12                           try agin         39.1244  RAG/Knowledge Base
+11  2026-02-12 13:25:53            transportation facility         47.1081  RAG/Knowledge Base
+12  2026-02-12 13:28:49         what is the fee structure?         49.8643  RAG/Knowledge Base
+13  2026-02-12 13:31:07           is there r&d department?         48.8138  RAG/Knowledge Base
+14  2026-02-12 13:33:48              how do i pay the fee?         38.2060  RAG/Knowledge Base
