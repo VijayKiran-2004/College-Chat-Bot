@@ -260,6 +260,44 @@ class UltraRAGSystem:
                 "placement_rate": "High"
             }
     
+    def _random_response(self, value, key_type, extra_info=None):
+        """Generate a random friendly response wrapper"""
+        import random
+        
+        templates = {
+            "principal": [
+                f"The Principal of TKRCET is **{value}**.",
+                f"Dr. **{value}** is our respected Principal.",
+                f"That would be **{value}**!",
+                f"Currently, **{value}** serves as the Principal."
+            ],
+            "vice_principal": [
+                f"The Vice Principal is **{value}**.",
+                f"**{value}** is the Vice Principal of our college."
+            ],
+            "secretary": [
+                f"The Secretary is **{value}**.",
+                f"**{value}** holds the position of Secretary."
+            ],
+            "chairman": [
+                f"The Chairman is **{value}**.",
+                f"Our Chairman is **{value}**."
+            ],
+            "dean": [
+                f"The Dean of Academics is **{value}**.",
+                f"**{value}** is the Dean of Academics."
+            ],
+            "hod": [
+                f"The HOD of **{extra_info}** is **{value}**.",
+                f"**{value}** heads the **{extra_info}** department.",
+                f"For **{extra_info}**, the HOD is **{value}**."
+            ]
+        }
+        
+        if key_type in templates:
+            return random.choice(templates[key_type])
+        return value
+
     def _load_corpus(self):
         """Load corpus from JSONL file"""
         documents = []
@@ -384,6 +422,58 @@ class UltraRAGSystem:
         # EXPLICIT KEYWORD MATCHING (guaranteed instant responses)
         # ============================================================
         
+        # Log check
+        if any(keyword in query_lower for keyword in ['principal', 'hod', 'dean', 'courses', 'timings', 'fees']):
+            print(f"  ⚡ [Fast Track] Keywords found in: '{query}'")
+
+        # Principal
+        if 'principal' in query_lower and 'vice' not in query_lower:
+            return self._random_response(KNOWLEDGE_BASE['personnel']['principal'], "principal")
+
+        # Vice Principal
+        if 'vice principal' in query_lower:
+            return self._random_response(KNOWLEDGE_BASE['personnel']['vice_principal'], "vice_principal")
+
+        # Secretary / Chairman
+        if 'secretary' in query_lower:
+            return self._random_response(KNOWLEDGE_BASE['personnel']['secretary'], "secretary")
+        if 'chairman' in query_lower:
+            return self._random_response(KNOWLEDGE_BASE['society']['chairman'], "chairman")
+
+        # Dean Academics
+        if 'dean' in query_lower and 'academic' in query_lower:
+             return self._random_response(KNOWLEDGE_BASE['personnel']['dean_academics'], "dean")
+
+        # HODs
+        if 'hod' in query_lower:
+            # Check for specific departments
+            deps = {
+                'cse': 'CSE', 'aiml': 'CSE-AIML', 'ds': 'CSE-DS', 'data science': 'CSE-DS',
+                'ece': 'ECE', 'eee': 'EEE', 'it': 'IT', 'mech': 'Mechanical', 'civil': 'Civil', 'mba': 'MBA'
+            }
+            found_dept = False
+            for key, label in deps.items():
+                if key in query_lower:
+                    hod_name = KNOWLEDGE_BASE['personnel']['hod'].get(key if key in ['cse', 'ece', 'eee', 'it', 'mech', 'civil', 'mba'] else 'cse-'+key if 'cse' not in key else key)
+                    # Fallback for mapping
+                    if not hod_name:
+                         # Try direct access if key matches schema
+                         hod_name = KNOWLEDGE_BASE['personnel']['hod'].get(key)
+                    
+                    if hod_name:
+                        return self._random_response(hod_name, "hod", label)
+                        found_dept = True
+                        break
+            
+            if not found_dept:
+                return "Which department's HOD are you looking for? (e.g., CSE, ECE, Mechanical)"
+
+        # Courses / Branches
+        if any(word in query_lower for word in ['courses', 'branches', 'groups', 'programmes', 'programs']):
+            ug = ', '.join(KNOWLEDGE_BASE['courses']['ug'])
+            pg = ', '.join(KNOWLEDGE_BASE['courses']['pg'])
+            return f"**Courses Offered:**\n\n🎓 **B.Tech:** {ug}\n\n🎓 **M.Tech/MBA:** {pg}"
+
         # Timings
         if any(word in query_lower for word in ['timing', 'timings', 'hours', 'schedule', 'time table', 'timetable']):
             lunch = KNOWLEDGE_BASE['timings'].get('lunch_break', '')
@@ -650,8 +740,8 @@ Your Friendly Response:"""
                         "temperature": 0.7,  # Natural conversation
                         "top_k": 40,         # Balanced creativity
                         "top_p": 0.9,        # Balanced coherence
-                        "num_predict": 120,  # Reduced for faster responses (was 200)
-                        "num_ctx": 1024      # Reduced context window for speed (was 1536)
+                        "num_predict": 100,  # Reduced for faster responses (was 120)
+                        "num_ctx": 512       # Reduced context window for speed (was 1024)
                     }
                 },
                 timeout=70  # Aligned with backend's 70s timeout

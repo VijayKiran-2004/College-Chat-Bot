@@ -43,7 +43,7 @@ config:
     # Generation parameters
     temperature: 0.3
     max_tokens: 250
-    num_ctx: 2048
+    num_ctx: 512
 
 # Pipeline Workflow
 pipeline:

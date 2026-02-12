@@ -10,6 +10,7 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 - 🛡️ **Scope Validation**: Built-in filtering to reject non-college queries.
 -  **Knowledge Base**: Instant answers for critical facts (personnel, timings, location).
 - ⚡ **Fast & Lightweight**: Runs efficiently on local hardware with minimal memory footprint.
+- 🗣️ **Natural Conversations**: Varied, friendly responses for common queries to avoid robotic answers.
 
 ## Tech Stack
 - **Language**: Python 3.8+
