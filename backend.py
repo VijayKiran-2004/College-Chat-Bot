@@ -7,6 +7,7 @@ Provides REST API endpoints for the frontend to interact with UltraRAG
 import sys
 from pathlib import Path
 import uuid
+import json
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -129,7 +130,7 @@ def initialize_systems():
     print("\nInitializing Systems...")
     try:
         response_logger = ResponseLogger()
-        print("✓ Response Logger initialized")
+        print(f"✓ Response Logger initialized. Saving logs to: {response_logger.log_file}")
         query_router = QueryRouter()
         print("✓ Query Router & Unified Brain initialized successfully!")
         return True
@@ -177,19 +178,22 @@ async def health_check():
     }
 
 
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query")
 async def chat(request: QueryRequest):
     """
     Main chat endpoint - accepts user queries and returns responses
+    Supports streaming for RAG queries to improve perceived latency.
     
     Request:
         - message: User's question
         - session_id: Optional session ID for conversation continuity
     
     Response:
-        - answer: Chatbot's response
-        - session_id: Session ID for this conversation
+        - For streaming (RAG): Server-Sent Events stream
+        - For non-streaming (SQL): JSON response with answer and session_id
     """
+    from fastapi.responses import StreamingResponse
+    from app.services.intent_detector import IntentDetector
     
     if query_router is None:
         raise HTTPException(
@@ -220,86 +224,143 @@ async def chat(request: QueryRequest):
         # Prepare chat history context (last 3 turns)
         recent_history = session_history[session_id][-6:] if len(session_history[session_id]) > 0 else []
         
-        # Generate response using Unified Query Router with timeout
+        # Detect intent to decide streaming vs non-streaming
+        intent_detector = IntentDetector()
+        intent = intent_detector.detect_intent(request.message)
+        
+        # SQL queries are fast, no need to stream
+        # RAG queries benefit from streaming
+        use_streaming = (intent == 'general' or intent == 'hybrid')
+        
         start_time = time.time()
         
-        # Default metadata
-        response_source = "Unknown"
-        response_accuracy = "N/A"
-        
-        try:
-            # Import here to avoid circular dependency
-            import requests
-            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
-            
-            # Run query_router in a thread with timeout
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(query_router.route_query, request.message, recent_history)
+        if use_streaming:
+            # Streaming response for RAG queries
+            async def generate_stream():
+                """Generator for streaming response - accumulates chunks for logging"""
                 try:
-                    result = future.result(timeout=70)  # 70 second timeout
+                    # Get the RAG system directly
+                    rag_system = query_router.rag_system
                     
-                    # Handle dictionary response (new format)
-                    if isinstance(result, dict):
-                        answer = result.get('response',str(result))
-                        response_source = result.get('source', 'Unknown')
-                        response_accuracy = result.get('accuracy', 'N/A')
-                    else:
-                        # Fallback for old format
-                        answer = str(result)
+                    actual_source = "RAG (Streamed)" # Default
+                    full_response = ""  # Accumulate complete response for logging
+                    
+                    # Stream the response
+                    for chunk in rag_system(request.message, stream=True):
+                        # Check for metadata
+                        if isinstance(chunk, dict) and chunk.get("type") == "metadata":
+                            actual_source = chunk.get("source", actual_source)
+                            continue
                         
-                    # Reset timeout count on success
-                    if session_id in session_timeout_count:
-                        session_timeout_count[session_id] = 0
-                except FuturesTimeoutError:
-                    # Track timeout attempts
-                    session_timeout_count[session_id] = session_timeout_count.get(session_id, 0) + 1
+                        # Accumulate the chunk for logging
+                        full_response += chunk
+                            
+                        # Format as Server-Sent Events
+                        yield f"data: {json.dumps({'chunk': chunk})}\n\n"
                     
-                    if session_timeout_count[session_id] == 1:
-                        # First timeout - helpful message
-                        answer = "I'm taking a bit too long to think about that. Could you try asking in a simpler way?"
-                    else:
-                        # Second+ timeout - respectful denial
-                        answer = "I apologize, but I'm having trouble processing this question right now. Please try a different question or contact the college office for immediate assistance."
-                        # Reset counter after second timeout
-                        session_timeout_count[session_id] = 0
+                    # Send completion signal
+                    yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
                     
-                    response_source = "System"
-                    response_accuracy = "Timeout"
-        except Exception as query_error:
-            print(f"Query execution error: {query_error}")
-            answer = "I encountered an error while processing your question. Please try again or rephrase your question."
-        
-        end_time = time.time()
-        response_time = end_time - start_time
-        
-        # Log the response
-        try:
-            if response_logger:
-                response_logger.log_response(
-                    user_query=request.message,
-                    bot_response=str(answer),
-                    time_taken=response_time,
-                    session_id=session_id,
-                    source=response_source,
-                    accuracy=response_accuracy
-                )
-        except Exception as log_err:
-            print(f"Logging failed: {log_err}")
+                    # Log the COMPLETE response after streaming finishes
+                    end_time = time.time()
+                    response_time = end_time - start_time
+                    
+                    if response_logger:
+                        response_logger.log_response(
+                            user_query=request.message,
+                            bot_response=full_response,  # Log complete accumulated response
+                            time_taken=response_time,
+                            session_id=session_id,
+                            source=actual_source,
+                            accuracy="High"
+                        )
+                except Exception as e:
+                    print(f"Streaming error: {e}")
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            
+            return StreamingResponse(
+                generate_stream(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "Connection": "keep-alive",
+                    "X-Accel-Buffering": "no"  # Disable nginx buffering
+                }
+            )
+        else:
+            # Non-streaming response for SQL queries (they're already fast)
+            response_source = "Unknown"
+            response_accuracy = "N/A"
+            
+            try:
+                import requests
+                from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+                
+                # Run query_router in a thread with timeout
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(query_router.route_query, request.message, recent_history)
+                    try:
+                        result = future.result(timeout=70)  # 70 second timeout
+                        
+                        # Handle dictionary response (new format)
+                        if isinstance(result, dict):
+                            answer = result.get('response', str(result))
+                            response_source = result.get('source', 'Unknown')
+                            response_accuracy = result.get('accuracy', 'N/A')
+                        else:
+                            # Fallback for old format
+                            answer = str(result)
+                        
+                        # Reset timeout count on success
+                        if session_id in session_timeout_count:
+                            session_timeout_count[session_id] = 0
+                    except FuturesTimeoutError:
+                        # Track timeout attempts
+                        session_timeout_count[session_id] = session_timeout_count.get(session_id, 0) + 1
+                        
+                        if session_timeout_count[session_id] == 1:
+                            answer = "I'm taking a bit too long to think about that. Could you try asking in a simpler way?"
+                        else:
+                            answer = "I apologize, but I'm having trouble processing this question right now. Please try a different question or contact the college office for immediate assistance."
+                            session_timeout_count[session_id] = 0
+                        
+                        response_source = "System"
+                        response_accuracy = "Timeout"
+            except Exception as query_error:
+                print(f"Query execution error: {query_error}")
+                answer = "I encountered an error while processing your question. Please try again or rephrase your question."
+            
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            # Log the response
+            try:
+                if response_logger:
+                    response_logger.log_response(
+                        user_query=request.message,
+                        bot_response=str(answer),
+                        time_taken=response_time,
+                        session_id=session_id,
+                        source=response_source,
+                        accuracy=response_accuracy
+                    )
+            except Exception as log_err:
+                print(f"Logging failed: {log_err}")
 
-        # Store bot response in history
-        session_history[session_id].append({
-            "role": "bot",
-            "message": answer
-        })
-        
-        # Keep session history manageable (last 50 exchanges)
-        if len(session_history[session_id]) > 100:
-            session_history[session_id] = session_history[session_id][-100:]
-        
-        return QueryResponse(
-            answer=str(answer),
-            session_id=session_id
-        )
+            # Store bot response in history
+            session_history[session_id].append({
+                "role": "bot",
+                "message": answer
+            })
+            
+            # Keep session history manageable (last 50 exchanges)
+            if len(session_history[session_id]) > 100:
+                session_history[session_id] = session_history[session_id][-100:]
+            
+            return QueryResponse(
+                answer=str(answer),
+                session_id=session_id
+            )
     
     except Exception as e:
         print(f"Error processing query: {e}")
