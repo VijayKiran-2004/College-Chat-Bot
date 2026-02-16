@@ -4,7 +4,7 @@ from pathlib import Path
 from openpyxl import Workbook, load_workbook
 
 class ResponseLogger:
-    def __init__(self, log_dir="logs", filename="response_log.xlsx"):
+    def __init__(self, log_dir=None, filename="response_log.xlsx"):
         """
         Initialize the ResponseLogger.
         
@@ -12,7 +12,12 @@ class ResponseLogger:
             log_dir (str): Directory where the log file will be stored.
             filename (str): Name of the Excel file.
         """
-        self.log_dir = Path(log_dir)
+        if log_dir is None:
+            # Default to logs directory in project root
+            self.log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
+        else:
+            self.log_dir = Path(log_dir)
+            
         self.log_file = self.log_dir / filename
         self._ensure_log_file()
 
@@ -70,5 +75,8 @@ class ResponseLogger:
             ws.append([timestamp, user_query, bot_response, f"{time_taken:.4f}", session_id, source, accuracy])
             
             wb.save(self.log_file)
+            print(f"✓ Logged response to: {self.log_file}")
+        except PermissionError:
+            print(f"⚠ ERROR: Could not write to {self.log_file}. Is the file open in Excel?")
         except Exception as e:
             print(f"Error logging response: {e}")

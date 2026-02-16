@@ -313,7 +313,7 @@ class UltraRAGSystem:
             response = requests.post(
                 self.ollama_url,
                 json={"model": self.ollama_model, "prompt": "test", "stream": False},
-                timeout=30
+                timeout=90
             )
             if response.status_code == 200:
                 print(f"✓ Connected to Ollama: {self.ollama_model}")
@@ -449,6 +449,7 @@ class UltraRAGSystem:
             # Check for specific departments
             deps = {
                 'cse': 'CSE', 'aiml': 'CSE-AIML', 'ds': 'CSE-DS', 'data science': 'CSE-DS',
+                'csd': 'CSE-DS', 'ai': 'CSE-AIML', 'ml': 'CSE-AIML',
                 'ece': 'ECE', 'eee': 'EEE', 'it': 'IT', 'mech': 'Mechanical', 'civil': 'Civil', 'mba': 'MBA'
             }
             found_dept = False
@@ -613,7 +614,7 @@ class UltraRAGSystem:
 
 
     def _hybrid_retrieve(self, query, top_k=5):
-        """Retrieve using ChromaDB (Semantic Search)"""
+        """Retrieve using ChromaDB (Semantic Search) with relevance filtering"""
         if not self.collection:
            print("⚠ Database not initialized, skipping retrieval")
            return []
@@ -629,18 +630,44 @@ class UltraRAGSystem:
             # Chroma returns dict of lists, we need to restructure
             # results['documents'][0] is list of chunks
             # results['metadatas'][0] is list of metadata dicts
+            # results['distances'][0] is list of distance scores (lower = more similar)
             
             if not results['documents']:
                 return []
+            
+            # Get distances if available for filtering
+            distances = results.get('distances', [[]])[0] if results.get('distances') else []
                 
             for i in range(len(results['documents'][0])):
                 content = results['documents'][0][i]
                 metadata = results['metadatas'][0][i] if results['metadatas'] else {}
+                distance = distances[i] if i < len(distances) else 0
+                
+                # Filter out low-relevance documents
+                # Distance threshold: 0.0 = perfect match, 1.0 = completely different
+                # We'll keep documents with distance < 0.85 (relaxed from 0.7 for better recall)
+                if distance > 0.85:
+                    print(f"  [Filtering] Skipping low-relevance doc (distance: {distance:.3f})")
+                    continue
                 
                 docs.append({
                     "contents": content,
-                    "metadata": metadata
+                    "metadata": metadata,
+                    "relevance_score": 1 - distance  # Convert distance to similarity score
                 })
+            
+            # If we filtered out everything, return top 2 anyway (better than nothing)
+            if not docs and len(results['documents'][0]) > 0:
+                print("  [Warning] All docs filtered, returning top 2 anyway")
+                for i in range(min(2, len(results['documents'][0]))):
+                    content = results['documents'][0][i]
+                    metadata = results['metadatas'][0][i] if results['metadatas'] else {}
+                    distance = distances[i] if i < len(distances) else 0
+                    docs.append({
+                        "contents": content,
+                        "metadata": metadata,
+                        "relevance_score": 1 - distance
+                    })
             
             return docs
             
@@ -666,8 +693,15 @@ class UltraRAGSystem:
         
         return links[:3]  # Return max 3 links
     
-    def _generate_response(self, query, docs, language='en'):
-        """Generate response using Ollama with retrieved context"""
+    def _generate_response(self, query, docs, language='en', stream=False):
+        """Generate response using Ollama with retrieved context
+        
+        Args:
+            query: User query
+            docs: Retrieved documents
+            language: Response language ('en', 'hi', 'te')
+            stream: If True, yields chunks. If False, returns complete response.
+        """
         
         # Extract links first for Quick Links section
         links = self._extract_relevant_links(docs)
@@ -729,49 +763,75 @@ Your Friendly Response:"""
                 quick_links_section += f"• [{title}]({link})\n"
             quick_links_section += "\n"
         
+        # Build source links footer
+        source_links_section = ""
+        if links:
+            source_links_section = "\n\n📚 **Source Links:**\n"
+            for link in links:
+                source_links_section += f"• {link}\n"
+        
         try:
             response = requests.post(
                 self.ollama_url,
                 json={
                     "model": self.ollama_model,
                     "prompt": prompt,
-                    "stream": False,
+                    "stream": stream,  # Enable streaming if requested
                     "options": {
                         "temperature": 0.7,  # Natural conversation
                         "top_k": 40,         # Balanced creativity
                         "top_p": 0.9,        # Balanced coherence
-                        "num_predict": 100,  # Reduced for faster responses (was 120)
-                        "num_ctx": 512       # Reduced context window for speed (was 1024)
+                        "num_predict": 60,   # DRASTICALLY Reduced for speed (was 100)
+                        "num_ctx": 256       # DRASTICALLY Reduced context (was 512)
                     }
                 },
-                timeout=70  # Aligned with backend's 70s timeout
+                timeout=120,  # Increased to 120s to prevent timeouts on complex/slow queries
+                stream=stream  # Enable streaming in requests library
             )
-            if response.status_code == 200:
-                answer = response.json().get('response', '').strip()
-                if answer:
-                    # Build final response: Quick Links + Answer + Source Links
-                    final_response = quick_links_section + answer
-                    
-                    # Add Source Links at the bottom
-                    if links:
-                        final_response += "\n\n📚 **Source Links:**\n"
-                        for link in links:
-                            final_response += f"• {link}\n"
-                    
-                    return final_response
+            
+            if stream:
+                # Streaming mode: yield chunks as they arrive
+                # First, yield the quick links section
+                if quick_links_section:
+                    yield quick_links_section
+                
+                # Then yield the streamed response
+                for line in response.iter_lines():
+                    if line:
+                        try:
+                            chunk_data = json.loads(line)
+                            if 'response' in chunk_data:
+                                yield chunk_data['response']
+                            
+                            # Check if done
+                            if chunk_data.get('done', False):
+                                # Yield source links at the end
+                                if source_links_section:
+                                    yield source_links_section
+                                break
+                        except json.JSONDecodeError:
+                            continue
+            else:
+                # Non-streaming mode (original behavior)
+                if response.status_code == 200:
+                    answer = response.json().get('response', '').strip()
+                    if answer:
+                        # Build final response: Quick Links + Answer + Source Links
+                        final_response = quick_links_section + answer + source_links_section
+                        return final_response
         except Exception as e:
             print(f"⚠ Ollama error: {e}")
+            # Fallback to document snippets with links
+            fallback = quick_links_section + f"Here's what I found:\n\n{context}" + source_links_section
+            if stream:
+                yield fallback
+            else:
+                return fallback
         
-        # Fallback to document snippets with links
-        fallback = quick_links_section + f"Here's what I found:\n\n{context}"
-        
-        # Add Source Links at the bottom for fallback too
-        if links:
-            fallback += "\n\n📚 **Source Links:**\n"
-            for link in links:
-                fallback += f"• {link}\n"
-        
-        return fallback
+        # Fallback for non-streaming if nothing was returned
+        if not stream:
+            fallback = quick_links_section + f"Here's what I found:\n\n{context}" + source_links_section
+            return fallback
     
     def _format_kb_context(self):
         """Format knowledge base as context"""
@@ -793,47 +853,72 @@ Your Friendly Response:"""
         
         return "\n".join(lines)
     
-    def __call__(self, query, language='en'):
-        """Main entry point for queries"""
+    def __call__(self, query, language='en', stream=False, return_dict=False):
+        """Main entry point for queries
+        
+        Args:
+            query: User query string
+            language: Response language ('en', 'hi', 'te')
+            stream: If True, yields response chunks. If False, returns complete response.
+            return_dict: If True (and not streaming), returns dict with response and metadata.
+        """
         query = query.strip()
         if not query:
-            return "Please enter a question."
+            if stream:
+                yield "Please enter a question."
+                return
+            return {"response": "Please enter a question.", "source": "System"} if return_dict else "Please enter a question."
         
-        # Greetings
         # Greetings (Flexible Regex Matching)
         import re
-        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]*$"
+        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]* $"
         
         if re.match(greetings_pattern, query.lower()):
-            return "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today?"
+            greeting_response = "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today!"
+            if stream:
+                yield {"type": "metadata", "source": "Greeting"}
+                yield greeting_response
+                return
+            return {"response": greeting_response, "source": "Greeting"} if return_dict else greeting_response
         
-        # Check cache first (for exact query matches)
-        query_key = query.lower().strip()
-        if query_key in self.response_cache:
-            print("  [Cache Hit] Returning cached response")
-            return self.response_cache[query_key]
+        # Check cache first (for exact query matches) - only for non-streaming
+        if not stream:
+            query_key = query.lower().strip()
+            if query_key in self.response_cache:
+                print("  [Cache Hit] Returning cached response")
+                return {"response": self.response_cache[query_key], "source": "Cache"} if return_dict else self.response_cache[query_key]
         
         # Check knowledge base first
         kb_answer = self._check_knowledge_base(query)
         if kb_answer:
-            # Cache knowledge base answers
-            self.response_cache[query_key] = kb_answer
-            # Limit cache size to 50 entries
-            if len(self.response_cache) > 50:
-                # Remove oldest entry (FIFO)
-                self.response_cache.pop(next(iter(self.response_cache)))
-            return kb_answer
+            if not stream:
+                # Cache knowledge base answers
+                query_key = query.lower().strip()
+                self.response_cache[query_key] = kb_answer
+                # Limit cache size to 50 entries
+                if len(self.response_cache) > 50:
+                    # Remove oldest entry (FIFO)
+                    self.response_cache.pop(next(iter(self.response_cache)))
+            
+            if stream:
+                yield {"type": "metadata", "source": "Knowledge Base"}
+                yield kb_answer
+                return
+            return {"response": kb_answer, "source": "Knowledge Base"} if return_dict else kb_answer
         
         # Retrieve relevant documents
         docs = self._hybrid_retrieve(query, top_k=3)
         
         # Generate response
-        response = self._generate_response(query, docs, language)
-        
-        # Links are now handled inside _generate_response() method
-        # No need to add them here to avoid duplication
-        
-        return response
+        if stream:
+            yield {"type": "metadata", "source": "RAG"}
+            # Streaming mode: yield chunks
+            for chunk in self._generate_response(query, docs, language, stream=True):
+                yield chunk
+        else:
+            # Non-streaming mode: return complete response
+            response = self._generate_response(query, docs, language, stream=False)
+            return {"response": response, "source": "RAG"} if return_dict else response
 
 
 if __name__ == '__main__':

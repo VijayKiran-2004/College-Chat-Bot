@@ -47,6 +47,14 @@ class QueryRouter:
         # Detect intent
         intent = self.intent_detector.detect_intent(query)
         
+        # Handle greetings instantly (no RAG/SQL needed)
+        if intent == 'greeting':
+            return {
+                "response": "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today?",
+                "source": "Instant Response",
+                "accuracy": "100%"
+            }
+        
         # Override for specific keywords that might be misclassified as student queries (e.g., 'sports fest')
         general_keywords = ['fest', 'tournament', 'sports', 'event', 'club', 'campus', 'hostel', 'bus', 'transport']
         if any(keyword in query.lower() for keyword in general_keywords):
@@ -54,12 +62,17 @@ class QueryRouter:
         
         if intent == 'general':
             # Use RAG system only
-            response = self.rag_system(query)
-            # Check if it was a cache hit or KB answer (usually high confidence)
-            # For now, we assume RAG/KB is generally high if it found something
+            result = self.rag_system(query, return_dict=True)
+            if isinstance(result, dict):
+                 response = result.get('response')
+                 source = result.get('source', 'RAG/Knowledge Base')
+            else:
+                 response = result
+                 source = "RAG/Knowledge Base"
+            
             return {
                 "response": response,
-                "source": "RAG/Knowledge Base",
+                "source": source,
                 "accuracy": "High" # Placeholder, ideally comes from RAG system
             }
         

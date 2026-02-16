@@ -30,11 +30,17 @@ class IntentDetector:
         Detect query intent
         
         Returns:
+            'greeting' - Simple greeting
             'student' - Query about specific student(s)
             'general' - Query about college info
             'hybrid' - Query needs both RAG and SQL
         """
-        query_lower = query.lower()
+        query_lower = query.lower().strip()
+        
+        # Check for greetings first (instant response)
+        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]* $"
+        if re.match(greetings_pattern, query_lower):
+            return 'greeting'
         
         # Check for student-related patterns
         has_student_keywords = any(kw in query_lower for kw in self.student_keywords)
@@ -44,7 +50,7 @@ class IntentDetector:
         has_student_id = bool(re.search(r'\b\d{5,10}\b', query))
         
         # Check for CGPA/attendance conditions
-        has_student_condition = bool(re.search(r'(cgpa|attendance)\s*[><=]', query_lower))
+        has_student_condition = bool(re.search(r'(cgpa|attendance)\s*[><= ]', query_lower))
         
         # Decision logic
         if (has_student_keywords or has_student_id or has_student_condition) and has_general_keywords:

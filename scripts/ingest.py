@@ -1,6 +1,6 @@
 """
 ChromaDB Ingestion Script
-Processes scraped data and stores it in ChromaDB with "Contextual Chunking".
+Processes scraped data and stores it in ChromaDB with "Semantic Chunking".
 """
 
 import json
@@ -8,7 +8,8 @@ import os
 import sys
 import chromadb
 from chromadb.utils import embedding_functions
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
+from langchain_huggingface import HuggingFaceEmbeddings
 import uuid
 
 # Fix Windows encoding
@@ -98,13 +99,16 @@ def main():
         print(f"⚠ Warning: Could not initialize LLM ({e}). Proceeding with raw text.")
         llm = None
 
-    # 4. Contextual Chunking & Processing
-    print("Processing and Chunking documents...")
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=100,
-        length_function=len,
-        separators=["\n\n", "\n", " ", ""]
+    # 4. Semantic Chunking & Processing
+    print("Processing and Chunking documents (Semantic)...")
+    
+    # Initialize Embedding Model for Chunker (LangChain compatible)
+    chunker_embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+    # Initialize Semantic Chunker
+    text_splitter = SemanticChunker(
+        embeddings=chunker_embeddings,
+        breakpoint_threshold_type="percentile" 
     )
 
     ids = []
