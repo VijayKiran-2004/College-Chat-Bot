@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - February 2026
+
+### Added
+- **Navigation Link Chips**: Clickable 🔗 link chips now appear below chat responses, linking to relevant TKRCET website pages.
+  - `extractLinks()` and `renderLinkChips()` reusable functions in frontend JavaScript
+  - Links extracted and rendered for both SSE streaming and non-streaming responses
+- **Topic-Based Link Mapping**: 28 query keywords mapped to real TKRCET website URLs in `TOPIC_LINKS` class attribute
+  - `_get_topic_links()` method matches query keywords (admission, cse, placement, etc.) to relevant website pages
+  - Falls back to main TKRCET homepage when no topic keyword matches
+- **KB Responses Include Links**: Knowledge Base fast-track responses now also include topic-based navigation links
+
+### Changed
+- **`ultra_rag.py`**: `_extract_relevant_links()` now accepts a `query` parameter and falls back to topic-based links when corpus documents lack URLs
+- **`ultra_rag.py`**: Quick Links and Source Links sections handle both dict format (topic links) and string format (document links)
+- **`frontend/index.html`**: Link extraction regex updated to match all backend headers (`📌 **Quick Links:**`, `📚 **Source Links:**`, `Related Links:`, `Sources:`)
+
+### Fixed
+- **Missing Navigation Links**: Links were never visible because (1) the frontend regex didn't match backend headers and (2) the SSE streaming path skipped link extraction entirely
+- **Empty Corpus URLs**: All corpus documents had `"url": ""`, so `_extract_relevant_links()` always returned empty — now falls back to topic-based links
+
+---
+
 ## [3.0.0] - February 2026
 
 ### Added
@@ -76,5 +98,5 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-**Current Version**: 3.0.0  
+**Current Version**: 3.1.0  
 **Status**: Production Ready ✅

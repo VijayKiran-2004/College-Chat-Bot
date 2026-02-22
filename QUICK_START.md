@@ -1,4 +1,4 @@
-# Quick Start Guide - College Buddy v3.0
+# Quick Start Guide - College Buddy v3.1
 
 ## 🚀 Get Started in 3 Steps
 
@@ -25,6 +25,13 @@ ollama ps
 
 ### Step 3: Run the Chatbot
 
+**Option A: Web Interface (Recommended)**
+```bash
+python backend.py
+```
+*Then open `frontend/index.html` in your browser. Server runs at `http://127.0.0.1:8000`*
+
+**Option B: Terminal Interface**
 ```bash
 python terminal_chat.py
 ```
@@ -95,7 +102,13 @@ pip install -r requirements.txt --force-reinstall
 
 ---
 
-## 📁 What's New in v2.0
+## 📁 What's New in v3.1
+
+### 🔗 Navigation Links (February 2026)
+- ✅ Clickable link chips below responses linking to relevant TKRCET website pages
+- ✅ 28 topic keywords mapped to real TKRCET URLs (admissions, departments, placements, etc.)
+- ✅ Works in both SSE streaming and non-streaming response paths
+- ✅ KB fast-track responses also include navigation links
 
 ### ✨ Scope Validation (January 2026)
 - ✅ Filters out non-college queries (math, science, general knowledge)
@@ -155,7 +168,8 @@ status
 ✓ Embedding Model: all-MiniLM-L6-v2
 ✓ LLM Model: Llama 3.2:3b (via Ollama)
 ✓ Retrieval: ChromaDB (Vector Search)
-✓ System: UltraRAG v3.0
+✓ Navigation Links: 28 topic mappings active
+✓ System: UltraRAG v3.1
 ```
 
 ---
@@ -179,5 +193,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 3.0.0
+**Version**: 3.1.0
 **Last Updated**: February 2026

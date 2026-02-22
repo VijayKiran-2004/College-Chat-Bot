@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Chat Bot – Full Codebase Reference</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f7fa;
+            color: #222;
+            line-height: 1.7;
+        }
+
+        .cover {
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 60%, #1565c0 100%);
+            color: #fff;
+            padding: 80px 60px;
+            text-align: center;
+        }
+
+        .cover h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .cover h2 {
+            font-size: 1.3rem;
+            font-weight: 400;
+            margin-top: 12px;
+            opacity: 0.9;
+        }
+
+        .cover .meta {
+            margin-top: 30px;
+            font-size: 0.95rem;
+            opacity: 0.75;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 30px;
+        }
+
+        h2.section-title {
+            font-size: 1.6rem;
+            color: #0d47a1;
+            border-bottom: 3px solid #0d47a1;
+            padding-bottom: 8px;
+            margin: 50px 0 24px;
+        }
+
+        h3.subsection {
+            font-size: 1.15rem;
+            color: #1565c0;
+            margin: 30px 0 10px;
+            font-weight: 700;
+        }
+
+        .toc {
+            background: #fff;
+            border: 1px solid #dce3f0;
+            border-radius: 10px;
+            padding: 28px 36px;
+            margin: 30px 0;
+        }
+
+        .toc h3 {
+            font-size: 1.2rem;
+            color: #0d47a1;
+            margin-bottom: 14px;
+        }
+
+        .toc ol {
+            padding-left: 22px;
+        }
+
+        .toc li {
+            margin: 5px 0;
+        }
+
+        .toc a {
+            color: #1565c0;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .file-card {
+            background: #fff;
+            border: 1px solid #dce3f0;
+            border-radius: 10px;
+            padding: 24px 28px;
+            margin: 18px 0;
+            box-shadow: 0 2px 8px rgba(13, 71, 161, 0.06);
+        }
+
+        .file-card .file-path {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            background: #e8edf7;
+            color: #1a237e;
+            padding: 4px 10px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .file-card .file-type {
+            font-size: 0.78rem;
+            background: #0d47a1;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .file-card h4 {
+            font-size: 1.05rem;
+            color: #1a237e;
+            margin-bottom: 8px;
+        }
+
+        .file-card p {
+            margin: 6px 0;
+            color: #444;
+        }
+
+        .file-card ul {
+            margin: 8px 0 0 20px;
+            color: #444;
+        }
+
+        .file-card ul li {
+            margin: 4px 0;
+        }
+
+        .generates {
+            background: #e3f2fd;
+            border-left: 4px solid #1565c0;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin-top: 12px;
+        }
+
+        .generates strong {
+            color: #0d47a1;
+        }
+
+        .arch-box {
+            background: #fff;
+            border: 1px solid #dce3f0;
+            border-radius: 10px;
+            padding: 28px;
+            margin: 20px 0;
+        }
+
+        .arch-flow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .arch-node {
+            background: #0d47a1;
+            color: #fff;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .arch-arrow {
+            font-size: 1.5rem;
+            color: #90a4ae;
+        }
+
+        .note {
+            background: #fff8e1;
+            border-left: 4px solid #f9a825;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin: 12px 0;
+            font-size: 0.92rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0;
+        }
+
+        th {
+            background: #0d47a1;
+            color: #fff;
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #e0e7f0;
+            font-size: 0.9rem;
+        }
+
+        tr:nth-child(even) td {
+            background: #f0f4fb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 9px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .badge-blue {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+
+        .badge-green {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-orange {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .badge-red {
+            background: #fce4ec;
+            color: #b71c1c;
+        }
+
+        footer {
+            background: #1a237e;
+            color: #90caf9;
+            text-align: center;
+            padding: 24px;
+            margin-top: 60px;
+            font-size: 0.88rem;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+            }
+
+            .cover {
+                padding: 50px 40px;
+            }
+
+            .file-card {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===== COVER ===== -->
+    <div class="cover">
+        <h1>📚 College Chat Bot</h1>
+        <h2>Full Codebase Reference Document</h2>
+        <p class="meta">Project: TKR College of Engineering &amp; Technology (TKRCET) AI Chatbot<br>
+            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Generated: February 2026</p>
+    </div>
+
+    <div class="container">
+
+        <!-- ===== TOC ===== -->
+        <div class="toc">
+            <h3>📋 Table of Contents</h3>
+            <ol>
+                <li><a href="#overview">Project Overview &amp; Architecture</a></li>
+                <li><a href="#root">Root-Level Files</a></li>
+                <li><a href="#backend">Core: backend.py</a></li>
+                <li><a href="#app-services">App / Services Layer</a></li>
+                <li><a href="#app-config">App / Config</a></li>
+                <li><a href="#app-database">App / Database</a></li>
+                <li><a href="#scripts">Scripts (Data Pipeline)</a></li>
+                <li><a href="#data">Data Directory</a></li>
+                <li><a href="#frontend">Frontend</a></li>
+                <li><a href="#docs">Docs Directory</a></li>
+                <li><a href="#logs">Logs Directory</a></li>
+                <li><a href="#test-files">Test &amp; Utility Files</a></li>
+                <li><a href="#notebooks">Jupyter Notebooks</a></li>
+                <li><a href="#pipeline">Full Data Pipeline Flow</a></li>
+                <li><a href="#run-order">What to Run &amp; In What Order</a></li>
+            </ol>
+        </div>
+
+        <!-- ===== SECTION 1: OVERVIEW ===== -->
+        <h2 class="section-title" id="overview">1. Project Overview &amp; Architecture</h2>
+
+        <div class="arch-box">
+            <p><strong>What is this project?</strong> The College Chat Bot is an AI-powered assistant for TKRCET (TKR
+                College of Engineering & Technology). Students can ask questions in plain English — about admissions,
+                fees, faculty, timings, bus routes, specific student records, placements — and receive intelligent
+                answers in real time.</p>
+            <br>
+            <p><strong>How does it work?</strong> The system uses a combination of <em>Retrieval-Augmented Generation
+                    (RAG)</em> — which searches the college website knowledge base — and a <em>SQL system</em> that
+                queries a real student database. An AI language model (Ollama/LLaMA) generates the final human-readable
+                answer.</p>
+            <br>
+            <p><strong>High-level Architecture:</strong></p>
+            <div class="arch-flow">
+                <div class="arch-node">🖥️ Frontend (HTML)</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⚙️ backend.py (FastAPI)</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">🔀 QueryRouter</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">🧠 IntentDetector</div>
+            </div>
+            <div class="arch-flow" style="margin-top:8px;">
+                <div class="arch-node">📖 UltraRAG (ChromaDB + KB)</div>
+                <div class="arch-arrow">OR</div>
+                <div class="arch-node">🗄️ SQLSystem (students.db)</div>
+                <div class="arch-arrow">OR</div>
+                <div class="arch-node">🤖 DeepReasoningChain (LangChain)</div>
+            </div>
+        </div>
+
+        <!-- ===== SECTION 2: ROOT FILES ===== -->
+        <h2 class="section-title" id="root">2. Root-Level Files</h2>
+
+        <div class="file-card">
+            <span class="file-path">requirements.txt</span><span class="file-type">Config</span>
+            <h4>Python Dependency List</h4>
+            <p>Lists all Python libraries the project needs. Key dependencies include:</p>
+            <ul>
+                <li><strong>fastapi, uvicorn</strong> — Web server framework</li>
+                <li><strong>chromadb</strong> — Vector database for semantic search</li>
+                <li><strong>sentence-transformers</strong> — Text embedding model</li>
+                <li><strong>langchain, langchain-community</strong> — AI agent orchestration</li>
+                <li><strong>pandas, openpyxl</strong> — Data processing and Excel logging</li>
+                <li><strong>selenium, webdriver-manager</strong> — Web scraping</li>
+                <li><strong>requests</strong> — HTTP calls to Ollama AI model</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates / Used for:</strong> Run
+                <code>pip install -r requirements.txt</code> to set up the Python environment. Nothing is generated — it
+                installs all dependencies.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">README.md</span><span class="file-type">Documentation</span>
+            <h4>Project Introduction &amp; Setup Guide</h4>
+            <p>The main documentation file visible on GitHub. Explains what the project does, how to install it, and how
+                to run it. Includes architecture diagrams and quick-start instructions.</p>
+            <div class="generates"><strong>📤 Generates:</strong> No output — purely a human-readable guide.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">QUICK_START.md</span><span class="file-type">Documentation</span>
+            <h4>Fast Setup Instructions</h4>
+            <p>A shorter, step-by-step guide (compared to README) to get the chatbot running as fast as possible. Good
+                for first-time users who just want to launch the app.</p>
+            <div class="generates"><strong>📤 Generates:</strong> No output — human-readable guide only.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">CHANGELOG.md</span><span class="file-type">Documentation</span>
+            <h4>Version History &amp; Changes</h4>
+            <p>Records all major updates made to the project: new features added, bugs fixed, performance improvements.
+                Useful for tracking what changed between versions.</p>
+            <div class="generates"><strong>📤 Generates:</strong> No output — human-readable log.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">TROUBLESHOOTING.md</span><span class="file-type">Documentation</span>
+            <h4>Common Errors &amp; Fixes</h4>
+            <p>Lists the most common problems users face (e.g., Ollama not running, ChromaDB not found, encoding issues
+                on Windows) and step-by-step solutions.</p>
+            <div class="generates"><strong>📤 Generates:</strong> No output — human-readable guide.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">.gitignore</span><span class="file-type">Config</span>
+            <h4>Git Ignore Rules</h4>
+            <p>Tells Git which files and folders to NOT track or upload to GitHub. For example: the <code>.venv/</code>
+                virtual environment folder, compiled Python files (<code>__pycache__</code>), the <code>logs/</code>
+                directory, and any sensitive API keys or database files.</p>
+            <div class="generates"><strong>📤 Generates:</strong> No output — controls Git tracking behavior.</div>
+        </div>
+
+        <!-- ===== SECTION 3: BACKEND ===== -->
+        <h2 class="section-title" id="backend">3. Core: backend.py</h2>
+
+        <div class="file-card">
+            <span class="file-path">backend.py</span><span class="file-type">Python — Main Server</span>
+            <h4>FastAPI Web Server — The Heart of the Chatbot</h4>
+            <p>This is the <strong>main entry point</strong> of the application. When you run the chatbot, you run this
+                file. It starts a web server that the frontend HTML page talks to.</p>
+
+            <h4 style="margin-top:14px;">Key API Endpoints:</h4>
+            <table>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>Method</th>
+                    <th>What it does</th>
+                </tr>
+                <tr>
+                    <td><code>GET /</code></td>
+                    <td>GET</td>
+                    <td>Health check — confirms the server is online</td>
+                </tr>
+                <tr>
+                    <td><code>GET /health</code></td>
+                    <td>GET</td>
+                    <td>Returns system status (router ready, active sessions)</td>
+                </tr>
+                <tr>
+                    <td><code>POST /query</code></td>
+                    <td>POST</td>
+                    <td>Main chat endpoint — receives a user message, routes it, returns the answer</td>
+                </tr>
+                <tr>
+                    <td><code>GET /session/{id}</code></td>
+                    <td>GET</td>
+                    <td>Retrieves the chat history for a given session</td>
+                </tr>
+                <tr>
+                    <td><code>DELETE /session/{id}</code></td>
+                    <td>DELETE</td>
+                    <td>Clears a specific chat session</td>
+                </tr>
+                <tr>
+                    <td><code>GET /sessions</code></td>
+                    <td>GET</td>
+                    <td>Lists all active sessions</td>
+                </tr>
+            </table>
+
+            <h4 style="margin-top:14px;">How the /query endpoint works:</h4>
+            <ul>
+                <li>Receives the user message + optional session ID</li>
+                <li>Detects intent (general question vs. student database query)</li>
+                <li>If RAG query → streams the response chunk-by-chunk (like ChatGPT typing effect)</li>
+                <li>If SQL query → returns a complete JSON response immediately</li>
+                <li>Logs every interaction to an Excel file via <code>ResponseLogger</code></li>
+            </ul>
+            <div class="generates"><strong>📤 Generates / Outputs:</strong>
+                <ul>
+                    <li>Live HTTP REST API at <code>http://127.0.0.1:8000</code></li>
+                    <li>Auto-generated Swagger docs at <code>http://127.0.0.1:8000/docs</code></li>
+                    <li>Passes data to <code>logs/response_log.xlsx</code> via logger</li>
+                </ul>
+            </div>
+            <div class="note">💡 <strong>How to run:</strong> <code>python backend.py</code> or
+                <code>uvicorn backend:app --reload</code>
+            </div>
+        </div>
+
+        <!-- ===== SECTION 4: APP SERVICES ===== -->
+        <h2 class="section-title" id="app-services">4. App / Services Layer</h2>
+        <p style="margin-bottom:18px;color:#555;">These files live in <code>app/services/</code> and form the "brain" of
+            the chatbot. Each handles a specific intelligence task.</p>
+
+        <div class="file-card">
+            <span class="file-path">app/services/query_router.py</span><span class="file-type">Python —
+                Orchestrator</span>
+            <h4>QueryRouter — The Traffic Director</h4>
+            <p>This is the central controller that decides <em>how</em> to answer a question. It holds instances of all
+                three answering systems (RAG, SQL, Deep Chain) and picks the right one based on the intent.</p>
+            <table>
+                <tr>
+                    <th>Intent</th>
+                    <th>Routes To</th>
+                    <th>Example</th>
+                </tr>
+                <tr>
+                    <td><code>greeting</code></td>
+                    <td>Instant hardcoded reply</td>
+                    <td>"Hi!" → "Hello! I'm your College Buddy 😊"</td>
+                </tr>
+                <tr>
+                    <td><code>general</code></td>
+                    <td>UltraRAG System</td>
+                    <td>"Who is the principal?"</td>
+                </tr>
+                <tr>
+                    <td><code>student</code></td>
+                    <td>SQL System</td>
+                    <td>"Students with CGPA > 9"</td>
+                </tr>
+                <tr>
+                    <td><code>hybrid</code></td>
+                    <td>Deep Reasoning Chain</td>
+                    <td>"Which CSE students are eligible for placement?"</td>
+                </tr>
+            </table>
+            <div class="generates"><strong>📤 Generates:</strong> Returns a Python dict
+                <code>{"response": "...", "source": "...", "accuracy": "..."}</code> back to <code>backend.py</code>.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/services/intent_detector.py</span><span class="file-type">Python — NLP
+                Classifier</span>
+            <h4>IntentDetector — Understanding What the User Wants</h4>
+            <p>Uses keyword matching and regular expressions to classify a user query into one of four categories
+                WITHOUT needing an AI model (making it very fast).</p>
+            <ul>
+                <li>Looks for <strong>student keywords</strong>: cgpa, attendance, marks, roll number, placed…</li>
+                <li>Looks for <strong>general keywords</strong>: college, hod, principal, fee, hostel, syllabus…</li>
+                <li>Detects <strong>student IDs</strong> via number patterns (e.g., 5–10 digit numbers)</li>
+                <li>Detects <strong>conditions</strong> like "cgpa &gt; 8.5" using regex</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> Returns a string label — <code>'greeting'</code>,
+                <code>'student'</code>, <code>'general'</code>, or <code>'hybrid'</code> — used by
+                <code>QueryRouter</code>.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/services/ultra_rag.py</span><span class="file-type">Python — RAG Engine (946
+                lines)</span>
+            <h4>UltraRAGSystem — College Knowledge Answering System</h4>
+            <p>This is the largest and most complex file. It handles all general college questions by combining a
+                hardcoded Knowledge Base with semantic search over the scraped website data.</p>
+
+            <h4 style="margin-top:14px;">How it answers a question:</h4>
+            <ol style="padding-left:20px;margin-top:8px;">
+                <li><strong>Knowledge Base (KB) check first</strong> — Checks a hardcoded dictionary of facts (principal
+                    name, timings, fees, HODs, etc.). If matched, responds instantly without AI.</li>
+                <li><strong>Semantic KB match</strong> — Uses the <code>all-MiniLM-L6-v2</code> embedding model to find
+                    the closest KB entry using cosine similarity (threshold: 0.55).</li>
+                <li><strong>ChromaDB retrieval</strong> — If KB doesn't have the answer, searches the vector database
+                    (built from scraped TKRCET website data) for the top 5 relevant chunks.</li>
+                <li><strong>Ollama LLM generation</strong> — Sends the retrieved context + user query to the LLaMA 3.2
+                    3B model running locally via Ollama API to generate a friendly, conversational answer.</li>
+            </ol>
+
+            <h4 style="margin-top:14px;">Topic-Based Navigation Links:</h4>
+            <p>The system includes a <code>TOPIC_LINKS</code> mapping of <strong>28 query keywords</strong> to real
+                TKRCET website URLs
+                (admissions, departments, placements, syllabus, etc.). When a response is generated:</p>
+            <ul>
+                <li>If corpus documents have URLs → those are used as source links</li>
+                <li>If no document URLs exist → <code>_get_topic_links()</code> matches query keywords to relevant
+                    TKRCET website pages</li>
+                <li>Links appear as <strong>📌 Quick Links</strong> at the top and <strong>📚 Source Links</strong> at
+                    the bottom of responses</li>
+                <li>Both KB fast-track and RAG streamed responses include navigation links</li>
+            </ul>
+
+            <h4 style="margin-top:14px;">Knowledge Base covers:</h4>
+            <ul>
+                <li>Personnel: Principal, Vice Principal, Dean, Secretary, Chairman, all HODs</li>
+                <li>Timings: College hours (9:40 AM – 4:20 PM), lunch break</li>
+                <li>History: Established 2002, JNTUH affiliation, location, campus size</li>
+                <li>Courses: All UG (8) and PG (3) programs</li>
+                <li>Fees: B.Tech, M.Tech, MBA, hostel, transport fees</li>
+                <li>Facilities: Transport routes, canteen, labs, hostels</li>
+                <li>Activities: NCC, NSS, cultural fest SISIR, technical fest MEDHA</li>
+                <li>Accreditations: NAAC A+, NBA, AICTE, UGC 2(f) &amp; 12(B)</li>
+                <li>Statistics: Injected from SQL database at startup (total/placed students)</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong>
+                <ul>
+                    <li>Plain text answers (from KB — instant) with topic navigation links</li>
+                    <li>Streamed token-by-token answers (from Ollama LLM) with Quick Links and Source Links</li>
+                    <li>Navigation link chips rendered by the frontend from matched TKRCET website URLs</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/services/sql_system.py</span><span class="file-type">Python — SQL Query
+                Engine</span>
+            <h4>SQLSystem — Student Database Query Handler</h4>
+            <p>Connects to <code>app/database/students.db</code> (SQLite) and answers questions about students. Converts
+                natural language into SQL queries either via regex entity extraction or via an LLM (Gemma 2B model via
+                Ollama).</p>
+
+            <h4 style="margin-top:14px;">Query processing pipeline:</h4>
+            <ul>
+                <li><strong>Entity extraction</strong>: Detects roll number, branch, name, CGPA condition, placement
+                    status, gender from the query text</li>
+                <li><strong>SQL generation</strong>: Builds a <code>SELECT</code> query from extracted entities OR asks
+                    Gemma2:2b to write the SQL</li>
+                <li><strong>Privacy protection</strong>: Returns only aggregate summaries (counts, averages) for general
+                    queries — never dumps individual student records</li>
+                <li><strong>Special cases</strong>: Top recruiting companies query, context-aware follow-up questions
+                </li>
+            </ul>
+
+            <h4 style="margin-top:14px;">Student table columns handled:</h4>
+            <p>ROLL NO, NAME, BRANCH, CGPA, ATTENDANCE, COMPANY PLACED, GENDER, SECTION, YEAR, PASSED YEAR, SEMESTER</p>
+            <div class="generates"><strong>📤 Generates:</strong> Formatted text summary like "Summary (45 students
+                found): • Placed: 38 out of 45 • Average CGPA: 8.2 • Top recruiters: TCS, Infosys…"</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/services/chain.py</span><span class="file-type">Python — LangChain Agent</span>
+            <h4>DeepReasoningChain — Hybrid AI Agent for Complex Questions</h4>
+            <p>Used for <strong>hybrid queries</strong> that need both RAG and SQL together. Uses <strong>LangChain's
+                    ReAct agent pattern</strong>: the AI thinks step-by-step about which tool to call.</p>
+            <ul>
+                <li>Tool 1 — <strong>CollegeKnowledge</strong>: Wraps UltraRAG for general info</li>
+                <li>Tool 2 — <strong>StudentDatabase</strong>: Wraps SQLSystem for student data</li>
+                <li>The agent uses <strong>LLaMA 3.2 3B</strong> (via Ollama) to decide which tool to call, read the
+                    result, and combine into a final answer</li>
+                <li>Falls back to plain RAG if the agent fails</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> A combined natural language answer that may pull from
+                both the knowledge base and the student database.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/services/logger_service.py</span><span class="file-type">Python — Logging</span>
+            <h4>ResponseLogger — Conversation Log Writer</h4>
+            <p>Automatically records every interaction the chatbot has. After each response, it appends a row to an
+                Excel file with full details.</p>
+
+            <h4 style="margin-top:14px;">Logged columns:</h4>
+            <table>
+                <tr>
+                    <th>Column</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>Timestamp</td>
+                    <td>Date and time of the interaction</td>
+                </tr>
+                <tr>
+                    <td>User Query</td>
+                    <td>Exact text the user typed</td>
+                </tr>
+                <tr>
+                    <td>Bot Response</td>
+                    <td>Full answer the bot gave</td>
+                </tr>
+                <tr>
+                    <td>Time Taken (s)</td>
+                    <td>How many seconds to generate the response</td>
+                </tr>
+                <tr>
+                    <td>Session ID</td>
+                    <td>UUID identifying the conversation session</td>
+                </tr>
+                <tr>
+                    <td>Source</td>
+                    <td>Where the answer came from (RAG/SQL/KB)</td>
+                </tr>
+                <tr>
+                    <td>Accuracy</td>
+                    <td>Confidence level (High / 100% / Medium / Timeout)</td>
+                </tr>
+            </table>
+            <div class="generates"><strong>📤 Generates:</strong> <code>logs/response_log.xlsx</code> — grows with every
+                chat interaction.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/services/prompt_construction.py</span><span class="file-type">Python — Prompt
+                Engineering</span>
+            <h4>Prompt Builder — Structures Questions for the AI Model</h4>
+            <p>Contains three helper functions that build the text prompt sent to Ollama. A well-structured prompt
+                yields better answers. This file is a utility — called internally by <code>ultra_rag.py</code>.</p>
+            <ul>
+                <li><code>build_context_prompt()</code> — General query prompt with retrieved docs + history</li>
+                <li><code>build_person_query_prompt()</code> — Stricter prompt for "who is the HOD?" type questions;
+                    prevents AI from making up names</li>
+                <li><code>build_general_prompt()</code> — Balanced general-purpose prompt</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> A formatted string (the prompt) that is sent to the
+                Ollama API. Does not produce any files.</div>
+        </div>
+
+        <!-- ===== SECTION 5: CONFIG ===== -->
+        <h2 class="section-title" id="app-config">5. App / Config</h2>
+
+        <div class="file-card">
+            <span class="file-path">app/config/ultrarag_config.yaml</span><span class="file-type">YAML —
+                Configuration</span>
+            <h4>UltraRAG System Configuration</h4>
+            <p>A configuration file in YAML format that stores settings for the RAG system such as the Ollama model
+                name, API URL, corpus path, ChromaDB path, and embedding model name. Allows changing settings without
+                touching Python code.</p>
+            <div class="generates"><strong>📤 Generates:</strong> No output — read by <code>ultra_rag.py</code> at
+                startup to configure itself.</div>
+        </div>
+
+        <!-- ===== SECTION 6: DATABASE ===== -->
+        <h2 class="section-title" id="app-database">6. App / Database</h2>
+
+        <div class="file-card">
+            <span class="file-path">app/database/students.db</span><span class="file-type">SQLite Database</span>
+            <h4>Student Records Database (≈248 KB)</h4>
+            <p>An SQLite database file containing the <code>students</code> table with real student data from TKRCET.
+                This is what <code>SQLSystem</code> queries when someone asks about placements, CGPA, attendance, etc.
+            </p>
+            <ul>
+                <li>Contains columns: ROLL NO, NAME, BRANCH, CGPA, ATTENDANCE, COMPANY PLACED, GENDER, YEAR, SEMESTER,
+                    PASSED YEAR, SECTION</li>
+                <li>Populated by running <code>scripts/setup_student_database.py</code></li>
+                <li>Source data comes from <code>data/rawdata/student_dataset.xlsx</code></li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> This IS the generated output of
+                <code>setup_student_database.py</code>. Powers all student queries.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">app/database/vectordb/</span><span class="file-type">Directory — Vector Store</span>
+            <h4>ChromaDB Vector Database &amp; Corpus Files</h4>
+            <p>This folder stores the semantic search components used for RAG:</p>
+            <ul>
+                <li><strong>chroma/</strong> — The persistent ChromaDB storage. Contains the <code>college_data</code>
+                    collection with embeddings of the scraped website data.</li>
+                <li><strong>scraped_data.jsonl</strong> — Raw scraped content from website pages (output of
+                    <code>scrape.py</code>).
+                </li>
+                <li><strong>corpus_ultrarag.jsonl</strong> — The active knowledge file loaded by <code>UltraRAG</code>
+                    (output of <code>corpus_converter.py</code>).</li>
+                <li><strong>unified_vectors.json</strong> — <strong>Master Knowledge Source</strong>. A legacy/central
+                    JSON file containing chunks, pre-computed embeddings, and manually refined FAQ data.</li>
+            </ul>
+            <div class="generates"><strong>📤 Note on unified_vectors.json:</strong> This file serves as the "Master
+                Source" for refined facts and FAQs. While <code>scrape.py</code> pulls fresh data,
+                <code>unified_vectors.json</code> is where manual fixes (like HOD names or specific college policies)
+                are typically stored and maintained.
+            </div>
+        </div>
+
+
+        <!-- ===== SECTION 7: SCRIPTS ===== -->
+        <h2 class="section-title" id="scripts">7. Scripts — The Data Pipeline</h2>
+        <p style="margin-bottom:18px;color:#555;">These files live in <code>scripts/</code> and are run <em>once</em>
+            (or periodically) to prepare data for the chatbot. They are NOT part of the live server.</p>
+
+        <div class="file-card">
+            <span class="file-path">scripts/scrape.py</span><span class="file-type">Python — Step 1: Web Scraper</span>
+            <h4>TKRCET Website Scraper</h4>
+            <p>The <strong>first step</strong> in the data pipeline. Reads a list of TKRCET website URLs from
+                <code>data/rawdata/ACP-links.csv</code>, opens each page with a headless Chrome browser (Selenium),
+                extracts all text content, and saves it as JSONL.
+            </p>
+            <ul>
+                <li>Uses <strong>4 parallel threads</strong> for fast scraping</li>
+                <li>Waits 2 seconds per page for JavaScript to load</li>
+                <li>Extracts page title + full body text</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> <code>app/database/vectordb/scraped_data.jsonl</code>
+                — one JSON object per scraped page, containing its URL, title, and text content.</div>
+            <div class="note">⚠️ Requires Chrome browser + Selenium + active internet connection. Run:
+                <code>python scripts/scrape.py</code>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">scripts/ingest.py</span><span class="file-type">Python — Step 2: Vector DB
+                Builder</span>
+            <h4>ChromaDB Ingestion Script</h4>
+            <p>The <strong>second step</strong>. Takes the scraped JSONL data and stores it in ChromaDB (the vector
+                database) using <em>semantic chunking</em>. This makes the data searchable by meaning, not just
+                keywords.</p>
+            <ul>
+                <li>Uses <strong>SemanticChunker</strong> (LangChain) with percentile breakpoint — splits text at
+                    meaning-change boundaries</li>
+                <li>Embeddings: <code>all-MiniLM-L6-v2</code> (384-dimension vectors)</li>
+                <li>Adds contextual prefix to each chunk: "Title: … Source: …"</li>
+                <li>Processes in batches of 100 to avoid memory overflow</li>
+                <li>Deletes and recreates the collection each run for clean rebuilds</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> <code>app/database/vectordb/chroma/</code> — the
+                ChromaDB persistent vector store used by UltraRAG at runtime.</div>
+            <div class="note">⚠️ Must run AFTER <code>scrape.py</code>. Run: <code>python scripts/ingest.py</code></div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">scripts/corpus_converter.py</span><span class="file-type">Python — Format
+                Converter</span>
+            <h4>Corpus Format Converter (JSON → JSONL)</h4>
+            <p>Converts the vector data from a unified JSON array format into the line-delimited JSONL format expected
+                by the UltraRAG system. Each output line contains:
+                <code>{"id": "doc_0", "contents": "...", "metadata": {...}}</code>.
+            </p>
+            <p>Also has a <code>--verify</code> option that checks each line of the output for correctness.</p>
+            <div class="generates"><strong>📤 Generates:</strong>
+                <code>app/database/vectordb/corpus_ultrarag.jsonl</code> — loaded by <code>UltraRAGSystem</code> at
+                startup to list available documents.
+            </div>
+            <div class="note">Run: <code>python scripts/corpus_converter.py --verify</code></div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">scripts/setup_student_database.py</span><span class="file-type">Python — DB
+                Setup</span>
+            <h4>Student Database Creator</h4>
+            <p>One-time setup script that reads <code>data/rawdata/student_dataset.xlsx</code> and imports it into the
+                SQLite database <code>app/database/students.db</code>, creating the <code>students</code> table with all
+                columns.</p>
+            <div class="generates"><strong>📤 Generates:</strong> <code>app/database/students.db</code> — the SQLite
+                student database file used by <code>SQLSystem</code>.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">scripts/clean_and_fill.py</span><span class="file-type">Python — Data Cleaner</span>
+            <h4>Student Data Cleaner &amp; Filler</h4>
+            <p>Pre-processes the raw student Excel file before importing into the database. Handles missing values,
+                standardizes column formats, fills placeholder data, and normalizes text fields like branch names and
+                gender.</p>
+            <div class="generates"><strong>📤 Generates:</strong> A cleaned version of the Excel file or directly
+                updates the SQLite database with clean records.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">scripts/cleanup_database.py</span><span class="file-type">Python — Data
+                Refinement</span>
+            <h4>Database Cleanup &amp; FAQ Enhancer</h4>
+            <p>This is the <strong>primary maintenance tool</strong> for <code>unified_vectors.json</code>. It fixes
+                data inaccuracies that a scraper might miss or pull incorrectly.</p>
+            <ul>
+                <li><strong>Data Fixes</strong>: Corrects specific facts (e.g., resolving PhD year conflicts, removing
+                    repetitive navigation menus).</li>
+                <li><strong>FAQ Injection</strong>: Injects high-priority FAQ entries for key personnel (Principal,
+                    HODs, Secretary) to ensure 100% accuracy.</li>
+                <li><strong>Cache Reset</strong>: Deletes old FAISS/BM25 indices to force the system to rebuild them
+                    with the new cleaned data.</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> A cleaned version of <code>unified_vectors.json</code>
+                (and a <code>.backup</code> file). Use this to "push" manual data fixes into the system.</div>
+        </div>
+
+
+        <div class="file-card">
+            <span class="file-path">scripts/clear_vectordb.py</span><span class="file-type">Python — Maintenance</span>
+            <h4>Vector Database Cleaner</h4>
+            <p>Deletes the ChromaDB collection content so you can start fresh. Use this before re-running
+                <code>ingest.py</code> if you want a clean rebuild of the vector database.
+            </p>
+            <div class="generates"><strong>📤 Generates:</strong> Removes data from
+                <code>app/database/vectordb/chroma/</code>. Nothing is created.
+            </div>
+        </div>
+
+
+
+        <div class="file-card">
+            <span class="file-path">scripts/migrate_csv_to_excel.py</span><span class="file-type">Python —
+                Migration</span>
+            <h4>CSV to Excel Converter</h4>
+            <p>One-time migration script that converts a CSV-format student dataset into the Excel (.xlsx) format
+                expected by <code>setup_student_database.py</code>.</p>
+            <div class="generates"><strong>📤 Generates:</strong> <code>data/rawdata/student_dataset.xlsx</code> from a
+                source CSV file.</div>
+        </div>
+
+
+
+        <div class="file-card">
+            <span class="file-path">scripts/run_batch_test.py</span><span class="file-type">Python — Testing</span>
+            <h4>Batch Query Tester</h4>
+            <p>Runs a predefined list of test questions through the full chatbot pipeline and records the responses.
+                Used to evaluate chatbot response quality across different question types before a release.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Prints responses to terminal or saves to a test
+                results file.</div>
+        </div>
+
+
+
+        <!-- ===== SECTION 8: DATA ===== -->
+        <h2 class="section-title" id="data">8. Data Directory</h2>
+
+        <div class="file-card">
+            <span class="file-path">data/rawdata/ACP-links.csv</span><span class="file-type">CSV — Input Data</span>
+            <h4>TKRCET Website URL List</h4>
+            <p>A CSV file containing all TKRCET website URLs that should be scraped. Each row is one URL. The web
+                scraper (<code>scripts/scrape.py</code>) reads this file to know which pages to visit.</p>
+            <div class="generates"><strong>📤 Generates:</strong> This is the INPUT to the scraping pipeline. Does not
+                generate anything itself.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">data/rawdata/student_dataset.xlsx</span><span class="file-type">Excel — Source Data
+                (≈113 KB)</span>
+            <h4>Raw Student Records Spreadsheet</h4>
+            <p>The original Excel file containing student records for TKRCET. This is the primary source of truth for
+                the student database. It gets imported into <code>students.db</code> using the setup script.</p>
+            <div class="generates"><strong>📤 Generates:</strong> This is the INPUT to
+                <code>setup_student_database.py</code>. Does not generate anything itself.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">data/rawdata/faq_rows.json</span><span class="file-type">JSON — Knowledge Data (≈34
+                KB)</span>
+            <h4>College FAQ Data</h4>
+            <p>A JSON file containing frequently asked questions and their answers about TKRCET. This serves as
+                additional knowledge for the chatbot, likely supplementing the scraped data in the vector database or
+                the hardcoded Knowledge Base.</p>
+            <div class="generates"><strong>📤 Generates:</strong> This is INPUT data for the pipeline. Consumed during
+                corpus building or KB construction.</div>
+        </div>
+
+        <!-- ===== SECTION 9: FRONTEND ===== -->
+        <h2 class="section-title" id="frontend">9. Frontend</h2>
+
+        <div class="file-card">
+            <span class="file-path">frontend/index.html</span><span class="file-type">HTML/CSS/JS — UI (≈40 KB)</span>
+            <h4>Chatbot Web Interface</h4>
+            <p>The complete front-end of the chatbot — a single HTML file that contains HTML structure, CSS styling, and
+                JavaScript all-in-one. Runs in the user's browser.</p>
+            <ul>
+                <li>Renders a chat window with send button, message bubbles, and typing indicators</li>
+                <li>Sends user messages to <code>POST /query</code> on <code>localhost:8000</code></li>
+                <li>Handles <strong>Server-Sent Events (SSE)</strong> streaming — displays AI response word-by-word as
+                    it arrives</li>
+                <li>Manages session IDs for conversation continuity</li>
+                <li>Renders markdown formatting (bold, bullet points, links) in responses</li>
+                <li><strong>Navigation Link Chips</strong>: Extracts Quick Links and Source Links from responses using
+                    <code>extractLinks()</code> and renders them as styled clickable chip elements via
+                    <code>renderLinkChips()</code> — works for both SSE streaming and non-streaming responses
+                </li>
+            </ul>
+
+            <h4 style="margin-top:14px;">Link Chip System:</h4>
+            <ul>
+                <li><code>extractLinks(text)</code> — Parses response text for link blocks (Quick Links, Source Links,
+                    Related Links, etc.) and standalone URLs. Returns clean text + extracted link objects.</li>
+                <li><code>renderLinkChips(container, suggestions)</code> — Creates styled 🔗 chip elements as
+                    <code>&lt;a&gt;</code> tags with <code>target="_blank"</code> and appends them below the response.
+                </li>
+                <li>For <strong>streaming responses</strong>: links are extracted after the stream completes
+                    (<code>data.done</code> event) and chips are rendered below the final response.</li>
+                <li>For <strong>non-streaming responses</strong>: links are extracted and rendered inline when the
+                    message bubble is created.</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> The visual chat interface displayed in the browser.
+                Sends API requests to <code>backend.py</code> and displays the responses with interactive navigation
+                link chips.</div>
+            <div class="note">💡 Open this file directly in a browser after starting <code>backend.py</code>.</div>
+        </div>
+
+        <!-- ===== SECTION 10: DOCS ===== -->
+        <h2 class="section-title" id="docs">10. Docs Directory</h2>
+        <p style="margin-bottom:18px;color:#555;">These files in <code>docs/</code> are internal technical documentation
+            for developers.</p>
+
+        <div class="file-card">
+            <span class="file-path">docs/rag.md</span><span class="file-type">Markdown — Technical Doc</span>
+            <h4>RAG System Architecture Documentation</h4>
+            <p>Explains in detail how the Retrieval-Augmented Generation (RAG) pipeline works in this project: from
+                document retrieval through ChromaDB to prompt construction and final generation via Ollama.</p>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">docs/vector_db.md</span><span class="file-type">Markdown — Technical Doc</span>
+            <h4>Vector Database Design Notes</h4>
+            <p>Covers the ChromaDB setup, the <code>all-MiniLM-L6-v2</code> embedding model choice, the collection
+                schema, and how cosine distance filtering works to avoid low-relevance results.</p>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">docs/chunking.md</span><span class="file-type">Markdown — Technical Doc</span>
+            <h4>Text Chunking Strategy</h4>
+            <p>Explains why and how semantic chunking (vs. naive fixed-size chunking) is used. Details the percentile
+                breakpoint method from LangChain's SemanticChunker and how contextual prefix enrichment improves
+                retrieval quality.</p>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">docs/Embeddings_SqlDB.md</span><span class="file-type">Markdown — Technical
+                Doc</span>
+            <h4>Embeddings + SQL Integration Notes</h4>
+            <p>Covers how the system blends vector search (RAG) and relational data (SQL) — the design decisions behind
+                having both systems and when each is preferred.</p>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">docs/AUTO_UPDATE.md</span><span class="file-type">Markdown — Technical Doc</span>
+            <h4>Auto-Update System Documentation</h4>
+            <p>Documents how the knowledge base can be refreshed — re-running the scraper and ingestor pipeline to pick
+                up new content from the TKRCET website automatically.</p>
+        </div>
+
+        <!-- ===== SECTION 11: LOGS ===== -->
+        <h2 class="section-title" id="logs">11. Logs Directory</h2>
+
+        <div class="file-card">
+            <span class="file-path">logs/response_log.xlsx</span><span class="file-type">Excel — Runtime Output</span>
+            <h4>Live Chatbot Interaction Log</h4>
+            <p>This file is <strong>automatically created and updated</strong> by <code>ResponseLogger</code> every time
+                the chatbot answers a question. It's the audit trail of all chatbot activity.</p>
+            <p>Use this file to analyze: response times, popular questions, answer sources, accuracy distribution, and
+                session activity.</p>
+            <div class="generates"><strong>📤 Generated by:</strong> <code>app/services/logger_service.py</code> —
+                appended after every single query response.</div>
+        </div>
+
+
+
+        <!-- ===== SECTION 12: TEST FILES ===== -->
+        <h2 class="section-title" id="test-files">12. Test &amp; Utility Files (Root Level)</h2>
+
+        <div class="file-card">
+            <span class="file-path">terminal_chat.py</span><span class="file-type">Python — CLI Interface</span>
+            <h4>Terminal-Based Chatbot Interface</h4>
+            <p>A command-line version of the chatbot. Instead of using the web browser, you type questions directly in
+                the terminal and get answers. Useful for testing without starting the full web server.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Printed responses in the terminal. Run:
+                <code>python terminal_chat.py</code>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">verify_codebase.py</span><span class="file-type">Python — Validation</span>
+            <h4>Codebase Health Checker</h4>
+            <p>A diagnostic script that checks whether all required files, directories, and configurations are present
+                and valid before running the chatbot. Helps catch setup errors early.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Printed checklist of ✓ pass / ✗ fail items for each
+                component.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">analyze_csv.py</span><span class="file-type">Python — Analytics</span>
+            <h4>Student CSV Data Analyzer</h4>
+            <p>Analyzes the raw student dataset CSV/Excel file and prints summary statistics: total students,
+                branch-wise counts, placement totals, CGPA distribution, etc. Useful for understanding the data before
+                importing.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Printed statistics report in the terminal.</div>
+        </div>
+
+
+
+        <div class="file-card">
+            <span class="file-path">detailed_log_analysis.py</span><span class="file-type">Python — Analytics</span>
+            <h4>Detailed Log Analyzer</h4>
+            <p>The primary tool for analyzing chatbot performance. Reads <code>logs/response_log.xlsx</code> and
+                produces
+                a thorough report including response time distribution, slow query detection, and accuracy patterns.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Detailed report printed to the terminal.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">refresh_logs.py</span><span class="file-type">Python — Utility</span>
+            <h4>Log Refresh Utility</h4>
+            <p>Refreshes or resets the response log Excel file — either archiving old data or clearing it to start fresh
+                logging. Useful before a new testing session.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Archives or recreates
+                <code>logs/response_log.xlsx</code>.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">test_gender.py</span><span class="file-type">Python — Unit Test</span>
+            <h4>Gender Query Test</h4>
+            <p>Tests that gender-based SQL queries work correctly — e.g., "show all female students" or "how many male
+                students are placed?" Verifies the regex entity extractor handles gender keywords properly.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Pass/fail test results printed to terminal.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">test_llm_sql.py</span><span class="file-type">Python — Unit Test</span>
+            <h4>LLM-based SQL Generation Test</h4>
+            <p>Tests the fallback SQL generation path — where Gemma2:2b is asked to write the SQL query. Verifies the
+                LLM produces valid SQLite syntax for various question types.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Test queries and generated SQL printed to terminal.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">test_logging_integration.py</span><span class="file-type">Python — Integration
+                Test</span>
+            <h4>Logging Integration Test</h4>
+            <p>End-to-end test that sends a query through the full pipeline and verifies it was correctly written to the
+                Excel log file with all required columns.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Test log entries in
+                <code>logs/response_log.xlsx</code> + pass/fail output.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">test_router_upgrade.py</span><span class="file-type">Python — Integration
+                Test</span>
+            <h4>Query Router Upgrade Test</h4>
+            <p>Tests that the <code>QueryRouter</code> correctly classifies and routes different types of queries to the
+                right subsystem. Useful after modifying the intent detection logic.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Routing decisions for each test query, printed to
+                terminal.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">test_typo.py</span><span class="file-type">Python — Unit Test</span>
+            <h4>Typo Handling Test</h4>
+            <p>Tests the chatbot's robustness to spelling mistakes and typos — e.g., "Who s the principel?" — verifying
+                the intent detector and KB still return correct results.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Test results printed to terminal.</div>
+        </div>
+
+        <!-- ===== SECTION 13: NOTEBOOKS ===== -->
+        <h2 class="section-title" id="notebooks">13. Jupyter Notebooks</h2>
+
+
+
+        <div class="file-card">
+            <span class="file-path">CollegeBuddy_Local.ipynb</span><span class="file-type">Jupyter Notebook — Local
+                Version (≈5 KB)</span>
+            <h4>Local Jupyter Notebook — Development Playground</h4>
+            <p>A stripped-down notebook for running and testing the chatbot locally in a Jupyter environment. Useful for
+                step-by-step debugging, experimenting with prompts, or testing individual components interactively.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Interactive chatbot cells in Jupyter. Good for
+                development and debugging individual components.</div>
+        </div>
+
+        <!-- ===== SECTION 14: PIPELINE FLOW ===== -->
+        <h2 class="section-title" id="pipeline">14. Full Data Pipeline Flow</h2>
+        <div class="arch-box">
+            <p>This shows the complete one-time setup process to get the chatbot ready from scratch:</p>
+            <br>
+            <div class="arch-flow">
+                <div class="arch-node">① data/rawdata/ACP-links.csv<br><small style="font-weight:300">(URL list —
+                        manual)</small></div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">② scripts/scrape.py<br><small style="font-weight:300">(Selenium scraper)</small>
+                </div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">③ vectordb/scraped_data.jsonl<br><small style="font-weight:300">(raw
+                        pages)</small></div>
+            </div>
+            <div class="arch-flow" style="margin-top:12px;">
+                <div class="arch-node">④ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
+                        ChromaDB)</small></div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑤ vectordb/chroma/<br><small style="font-weight:300">(vector DB —
+                        searchable)</small></div>
+            </div>
+            <div class="arch-flow" style="margin-top:12px;">
+                <div class="arch-node">⑥ data/rawdata/student_dataset.xlsx<br><small style="font-weight:300">(student
+                        data — manual)</small></div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑦ scripts/setup_student_database.py</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑧ database/students.db<br><small style="font-weight:300">(SQLite)</small></div>
+            </div>
+            <div class="arch-flow" style="margin-top:12px;">
+                <div class="arch-node">⑨ python backend.py</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑩ API at :8000</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑪ frontend/index.html<br><small style="font-weight:300">(in browser)</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SECTION 15: WHAT TO RUN ===== -->
+        <h2 class="section-title" id="run-order">15. What to Run &amp; In What Order</h2>
+        <table>
+            <tr>
+                <th>#</th>
+                <th>Command</th>
+                <th>What it does</th>
+                <th>Run when</th>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td><code>pip install -r requirements.txt</code></td>
+                <td>Install all dependencies</td>
+                <td>First time setup only</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td><code>ollama pull llama3.2:3b</code></td>
+                <td>Download LLaMA AI model</td>
+                <td>First time setup only</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td><code>ollama pull gemma2:2b</code></td>
+                <td>Download Gemma AI model (for SQL)</td>
+                <td>First time setup only</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td><code>python scripts/scrape.py</code></td>
+                <td>Scrape TKRCET website pages</td>
+                <td>First time & when site updates</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td><code>python scripts/cleanup_database.py</code></td>
+                <td>Fix data issues & inject FAQs</td>
+                <td>To apply manual knowledge fixes</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td><code>python scripts/ingest.py</code></td>
+                <td>Build the ChromaDB vector database</td>
+                <td>After scraping</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td><code>python scripts/corpus_converter.py</code></td>
+                <td>Convert to UltraRAG format</td>
+                <td>After ingestion or cleanup</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td><code>python scripts/setup_student_database.py</code></td>
+                <td>Import student Excel data into SQLite</td>
+                <td>First time & when data updates</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td><code>ollama serve</code></td>
+                <td>Start the Ollama AI model server</td>
+                <td>Every time before running backend</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td><code>python backend.py</code></td>
+                <td>Start the FastAPI web server</td>
+                <td>Every time you want to use the chatbot</td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td>Open <code>frontend/index.html</code></td>
+                <td>Launch the chat UI in browser</td>
+                <td>After backend is running</td>
+            </tr>
+        </table>
+
+        <!-- ===== SECTION 16: TROUBLESHOOTING ===== -->
+        <h2 class="section-title" id="troubleshooting">16. Troubleshooting &amp; Common Issues</h2>
+        <div class="file-card">
+            <h4>Common Errors &amp; Solutions</h4>
+            <table>
+                <tr>
+                    <th>Problem</th>
+                    <th>Cause</th>
+                    <th>Solution</th>
+                </tr>
+                <tr>
+                    <td><code>ModuleNotFoundError</code></td>
+                    <td>Missing Python libraries</td>
+                    <td>Run <code>pip install -r requirements.txt</code> in your virtual environment.</td>
+                </tr>
+                <tr>
+                    <td><code>503 Service Unavailable</code></td>
+                    <td>Systems failed to initialize</td>
+                    <td>Check terminal for errors. Usually caused by missing dependencies or Ollama being offline.</td>
+                </tr>
+                <tr>
+                    <td><code>Connection Error (Ollama)</code></td>
+                    <td>Ollama is not running</td>
+                    <td>Run <code>ollama serve</code> in a separate terminal and ensure models are pulled.</td>
+                </tr>
+                <tr>
+                    <td><code>✗ Error initializing systems</code></td>
+                    <td>Missing data/models</td>
+                    <td>Run <code>python scripts/ingest.py</code> and ensure <code>llama3.2:3b</code> is pulled.</td>
+                </tr>
+            </table>
+            <div class="note">💡 <strong>Tip:</strong> Always ensure your virtual environment is activated
+                (<code>.venv\Scripts\activate</code>) before running any script.</div>
+        </div>
+
+    </div>
+
+    <footer>
+        College Chat Bot — Codebase Reference Document &nbsp;|&nbsp; TKR College of Engineering &amp; Technology
+        &nbsp;|&nbsp; February 2026
+    </footer>
+</body>
+
+</html>

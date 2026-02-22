@@ -11,6 +11,8 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 -  **Knowledge Base**: Instant answers for critical facts (personnel, timings, location).
 - ⚡ **Fast & Lightweight**: Runs efficiently on local hardware with minimal memory footprint.
 - 🗣️ **Natural Conversations**: Varied, friendly responses for common queries to avoid robotic answers.
+- 🔗 **Navigation Links**: Responses include clickable link chips to relevant TKRCET website pages (admissions, departments, placements, etc.).
+- 🌐 **Web Frontend**: Browser-based chat interface with SSE streaming, dark mode, voice I/O, and multi-language support.
 
 ## Tech Stack
 - **Language**: Python 3.8+
@@ -18,8 +20,9 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 - **Embeddings**: all-MiniLM-L6-v2
 - **Vector DB**: ChromaDB (Semantic Search)
 - **Structured DB**: SQLite + Pandas (for Student Data)
-- **Routing**: Regex-based Intent Detection
-- **Backend**: FastAPI (optional web server)
+- **Routing**: Gemma 3 1B + Regex-based Intent Detection
+- **Backend**: FastAPI with SSE streaming
+- **Frontend**: HTML/CSS/JS with Tailwind CSS, Marked.js
 
 ## Prerequisites
 - **OS**: Windows, Linux, or macOS
@@ -201,16 +204,19 @@ sequenceDiagram
 college-buddy/
 ├── app/
 │   ├── services/
-│   │   ├── ultra_rag.py           # General Info Engine (RAG)
+│   │   ├── ultra_rag.py           # General Info Engine (RAG) + Topic Links
 │   │   ├── sql_system.py          # Student Data Engine (SQL)
 │   │   ├── intent_detector.py     # Router Logic
 │   │   ├── query_router.py        # Main Controller
 │   │   └── chain.py               # Chain-of-Thought handling
 │   ├── database/
 │   │   ├── students.db            # SQLite Student DB
-│   │   └── vectordb/              # ChromaDB Storage
+│   │   └── vectordb/              # ChromaDB Storage + Corpus
 │
-├── terminal_chat.py               # Consolidated Hybrid Interface
+├── frontend/
+│   └── index.html                 # Web Chat UI (SSE + Link Chips)
+├── backend.py                     # FastAPI Server (REST API + SSE)
+├── terminal_chat.py               # CLI Chat Interface
 ├── verify_codebase.py             # Diagnostic Tool
 ├── requirements.txt               # Dependencies
 └── README.md                      # Documentation
@@ -230,5 +236,5 @@ college-buddy/
 - **Praneetha**: Testing
 
 ---
-**Version**: 3.0.0 (Hybrid Edition)
+**Version**: 3.1.0 (Hybrid Edition)
 **Status**: Production Ready ✅

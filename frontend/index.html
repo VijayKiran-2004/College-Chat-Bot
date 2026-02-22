@@ -524,6 +524,60 @@
                 }
             };
 
+            // Reusable: extract link blocks from response text
+            const extractLinks = (text) => {
+                let cleanText = text;
+                let suggestions = [];
+
+                // Match all link block headers the backend may send
+                const linkRegex = /(?:Related Links:|Sources:|📌 Sources:|📌 \*\*Quick Links:\*\*|📚 \*\*Source Links:\*\*)\s*\n((?:[-•*]\s+\[.*?\]\(.*?\)\n?)+)/gi;
+                let match;
+
+                while ((match = linkRegex.exec(text)) !== null) {
+                    const list = match[1];
+                    list.split('\n').forEach(line => {
+                        const linkMatch = line.match(/\[(.*?)\]\((.*?)\)/);
+                        if (linkMatch) {
+                            suggestions.push({ title: linkMatch[1], url: linkMatch[2] });
+                        }
+                    });
+                    cleanText = cleanText.replace(match[0], '');
+                }
+
+                // Also extract any standalone markdown links (• URL\n patterns)
+                const standaloneRegex = /[•\-\*]\s*(https?:\/\/[^\s]+)\n?/g;
+                let standaloneMatch;
+                while ((standaloneMatch = standaloneRegex.exec(cleanText)) !== null) {
+                    const url = standaloneMatch[1];
+                    // Avoid duplicates
+                    if (!suggestions.find(s => s.url === url)) {
+                        let title = 'Visit Link';
+                        if (url.includes('tkrcet')) title = 'TKRCET Official Page';
+                        suggestions.push({ title, url });
+                        cleanText = cleanText.replace(standaloneMatch[0], '');
+                    }
+                }
+
+                return { cleanText: cleanText.trim(), suggestions };
+            };
+
+            // Reusable: render link chips into a container element
+            const renderLinkChips = (container, suggestions) => {
+                if (suggestions.length === 0) return;
+                const chipsDiv = document.createElement("div");
+                chipsDiv.classList.add("suggestions-container");
+                suggestions.forEach(item => {
+                    const chip = document.createElement("a");
+                    chip.classList.add("suggestion-chip");
+                    chip.textContent = "🔗 " + item.title;
+                    chip.href = item.url;
+                    chip.target = "_blank";
+                    chip.rel = "noopener noreferrer";
+                    chipsDiv.appendChild(chip);
+                });
+                container.appendChild(chipsDiv);
+            };
+
             const addMessage = (text, sender = "bot", isHtml = false, isEmpty = false) => {
                 const wrap = document.createElement("div");
                 wrap.classList.add("flex", sender === "user" ? "justify-end" : "justify-start", "animate-fade-in");
@@ -541,56 +595,14 @@
                     body.classList.add("markdown-body");
 
                     if (!isEmpty) {
-                        // Normal behavior
-                        // body.innerHTML = isHtml ? text : marked.parse(text);
-
-                        // Parse Suggestions
-                        let formattedText = text;
-                        let suggestions = [];
-
-                        // Regex to find "Related Links:" block AND capture the list
-                        const linkRegex = /(?:Related Links:|Sources:|📌 Sources:)\s*\n((?:[-•*]\s+\[.*?\]\(.*?\)\n?)+)/i;
-                        const match = text.match(linkRegex);
-
-                        if (match) {
-                            // Extract links
-                            const list = match[1];
-                            const lines = list.split('\n');
-
-                            lines.forEach(line => {
-                                // Extract [Title](URL)
-                                const linkMatch = line.match(/\[(.*?)\]\((.*?)\)/);
-                                if (linkMatch) {
-                                    suggestions.push({
-                                        title: linkMatch[1],
-                                        url: linkMatch[2]
-                                    });
-                                }
-                            });
-
-                            // Remove the links block from text for display
-                            formattedText = text.replace(match[0], '').trim();
-                        }
+                        // Extract links and render with chips
+                        const { cleanText, suggestions } = extractLinks(text);
 
                         // Render Main Text
-                        body.innerHTML = isHtml ? formattedText : marked.parse(formattedText);
+                        body.innerHTML = isHtml ? cleanText : marked.parse(cleanText);
 
-                        // Render Suggestions/Links
-                        if (suggestions.length > 0) {
-                            const chipsDiv = document.createElement("div");
-                            chipsDiv.classList.add("suggestions-container");
-
-                            suggestions.forEach(item => {
-                                const chip = document.createElement("a");
-                                chip.classList.add("suggestion-chip");
-                                chip.textContent = "🔗 " + item.title;
-                                chip.href = item.url;
-                                chip.target = "_blank"; // Open in new tab
-                                chipsDiv.appendChild(chip);
-                            });
-
-                            body.appendChild(chipsDiv);
-                        }
+                        // Render link chips below the response
+                        renderLinkChips(body, suggestions);
                     }
 
                     bubble.appendChild(body);
@@ -736,6 +748,13 @@
                                             // Save session ID
                                             if (data.session_id) {
                                                 sessionId = data.session_id;
+                                            }
+
+                                            // Extract links and re-render final response with chips
+                                            if (lastBubbleBody && fullResponse) {
+                                                const { cleanText, suggestions } = extractLinks(fullResponse);
+                                                lastBubbleBody.innerHTML = marked.parse(cleanText);
+                                                renderLinkChips(lastBubbleBody, suggestions);
                                             }
 
                                             // Re-enable input

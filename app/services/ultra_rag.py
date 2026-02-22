@@ -520,7 +520,7 @@ class UltraRAGSystem:
         best_score = similarities[best_idx]
         
         # Confidence threshold
-        CONFIDENCE_THRESHOLD = 0.55  # Lowered from 0.70 for better coverage
+        CONFIDENCE_THRESHOLD = 0.75  # Raised from 0.55 to reduce false KB matches
         
         if best_score < CONFIDENCE_THRESHOLD:
             return None  # Let RAG handle it
@@ -644,9 +644,9 @@ class UltraRAGSystem:
                 distance = distances[i] if i < len(distances) else 0
                 
                 # Filter out low-relevance documents
-                # Distance threshold: 0.0 = perfect match, 1.0 = completely different
-                # We'll keep documents with distance < 0.85 (relaxed from 0.7 for better recall)
-                if distance > 0.85:
+                # Distance threshold: 0.0 = perfect match, 2.0 = completely different
+                # Keep documents with distance < 1.0 for balanced precision/recall
+                if distance > 1.0:
                     print(f"  [Filtering] Skipping low-relevance doc (distance: {distance:.3f})")
                     continue
                 
@@ -675,23 +675,73 @@ class UltraRAGSystem:
             print(f"⚠ ChromaDB retrieval error: {e}")
             return []
     
-    def _extract_relevant_links(self, docs):
-        """Extract unique, relevant URLs from retrieved documents"""
+    # Topic-to-URL mapping using real TKRCET website pages
+    TOPIC_LINKS = {
+        'admission': {'title': 'Admissions', 'url': 'https://tkrcet.ac.in/admission-procedure/'},
+        'fee': {'title': 'Fee Structure', 'url': 'https://tkrcet.ac.in/fee-structure/'},
+        'placement': {'title': 'Placements', 'url': 'https://tkrcet.ac.in/placements/'},
+        'syllabus': {'title': 'Syllabus', 'url': 'https://tkrcet.ac.in/syllabus/'},
+        'principal': {'title': 'Principal', 'url': 'https://tkrcet.ac.in/principal/'},
+        'chairman': {'title': "Chairman's Message", 'url': 'https://tkrcet.ac.in/chairmans-message/'},
+        'cse': {'title': 'CSE Department', 'url': 'https://tkrcet.ac.in/computer-science-engineering/'},
+        'ece': {'title': 'ECE Department', 'url': 'https://tkrcet.ac.in/electronics-communication-engineering/'},
+        'eee': {'title': 'EEE Department', 'url': 'https://tkrcet.ac.in/electrical-electronics-engineering/'},
+        'it': {'title': 'IT Department', 'url': 'https://tkrcet.ac.in/information-technology/'},
+        'mech': {'title': 'Mechanical Dept', 'url': 'https://tkrcet.ac.in/mechanical-engineering/'},
+        'civil': {'title': 'Civil Dept', 'url': 'https://tkrcet.ac.in/civil-engineering/'},
+        'aiml': {'title': 'CSE-AIML Dept', 'url': 'https://tkrcet.ac.in/cse-artificial-intelligence-machine-learning/'},
+        'hostel': {'title': 'Campus Life', 'url': 'https://tkrcet.ac.in/about-the-campus/'},
+        'campus': {'title': 'About Campus', 'url': 'https://tkrcet.ac.in/about-the-campus/'},
+        'library': {'title': 'Library', 'url': 'https://tkrcet.ac.in/library/'},
+        'exam': {'title': 'Academics', 'url': 'https://tkrcet.ac.in/academic-regulations/'},
+        'calendar': {'title': 'Academic Calendar', 'url': 'https://tkrcet.ac.in/academic-calendars/'},
+        'ncc': {'title': 'Campus Life', 'url': 'https://tkrcet.ac.in/about-the-campus/'},
+        'nss': {'title': 'Campus Life', 'url': 'https://tkrcet.ac.in/about-the-campus/'},
+        'event': {'title': 'TKRCET Home', 'url': 'https://tkrcet.ac.in/'},
+        'fest': {'title': 'TKRCET Home', 'url': 'https://tkrcet.ac.in/'},
+        'naac': {'title': 'NAAC', 'url': 'https://tkrcet.ac.in/naac-2/'},
+        'alumni': {'title': 'Alumni', 'url': 'https://tkrcet.ac.in/alumni-sub-domain/'},
+        'transport': {'title': 'About Campus', 'url': 'https://tkrcet.ac.in/about-the-campus/'},
+        'mba': {'title': 'MBA Department', 'url': 'https://tkrcet.ac.in/mba/'},
+    }
+
+    def _get_topic_links(self, query):
+        """Get relevant website links based on query topic keywords"""
+        query_lower = query.lower()
         links = []
         seen_urls = set()
         
-        for doc in docs[:5]:  # Check top 5 docs
+        for keyword, link_info in self.TOPIC_LINKS.items():
+            if keyword in query_lower and link_info['url'] not in seen_urls:
+                seen_urls.add(link_info['url'])
+                links.append(link_info)
+        
+        # Always add the main website as a fallback if no topic matched
+        if not links:
+            links.append({'title': 'TKRCET Website', 'url': 'https://tkrcet.ac.in/'})
+        
+        return links[:3]  # Max 3 links
+
+    def _extract_relevant_links(self, docs, query=''):
+        """Extract URLs from documents, falling back to topic-based links"""
+        links = []
+        seen_urls = set()
+        
+        for doc in docs[:5]:
             url = doc.get('metadata', {}).get('url', '')
             source = doc.get('metadata', {}).get('source', '')
-            
-            # Prefer source over url field
             link = source if source and source.startswith('http') else url
             
             if link and link not in seen_urls and link.startswith('http'):
                 seen_urls.add(link)
                 links.append(link)
         
-        return links[:3]  # Return max 3 links
+        # If no document URLs found, use topic-based links
+        if not links and query:
+            topic_links = self._get_topic_links(query)
+            return topic_links  # Returns list of {title, url} dicts
+        
+        return links[:3]
     
     def _generate_response(self, query, docs, language='en', stream=False):
         """Generate response using Ollama with retrieved context
@@ -704,10 +754,10 @@ class UltraRAGSystem:
         """
         
         # Extract links first for Quick Links section
-        links = self._extract_relevant_links(docs)
+        links = self._extract_relevant_links(docs, query=query)
         
-        # Build context from retrieved documents
-        context = "\n\n".join([f"• {doc['contents'][:400]}" for doc in docs[:3]])
+        # Build context from retrieved documents (Increased snippet length for better detail)
+        context = "\n\n".join([f"• {doc['contents'][:1000]}" for doc in docs[:5]])
         
         # Build KB context
         kb_context = self._format_kb_context()
@@ -737,8 +787,8 @@ GUIDELINES:
 FORMATTING:
 - Use **bold** for important names and numbers
 - Use bullet points for lists
-- **Keep answers SHORT and concise** (2-3 sentences max unless listing items)
-- Get straight to the point
+- **Be comprehensive yet concise**: Provide a complete answer but avoid fluff.
+- If the question is complex, provide a step-by-step guide.
 
 What I Know About TKRCET:
 {kb_context}
@@ -755,12 +805,17 @@ Your Friendly Response:"""
         if links:
             quick_links_section = "📌 **Quick Links:**\n"
             for link in links:
-                # Format link with title
-                if 'tkrcet' in link.lower():
+                # Handle both dict format (topic links) and string format (document links)
+                if isinstance(link, dict):
+                    title = link['title']
+                    url = link['url']
+                elif 'tkrcet' in link.lower():
                     title = "TKRCET Official Page"
+                    url = link
                 else:
                     title = "Related Resource"
-                quick_links_section += f"• [{title}]({link})\n"
+                    url = link
+                quick_links_section += f"• [{title}]({url})\n"
             quick_links_section += "\n"
         
         # Build source links footer
@@ -768,7 +823,10 @@ Your Friendly Response:"""
         if links:
             source_links_section = "\n\n📚 **Source Links:**\n"
             for link in links:
-                source_links_section += f"• {link}\n"
+                if isinstance(link, dict):
+                    source_links_section += f"• [{link['title']}]({link['url']})\n"
+                else:
+                    source_links_section += f"• {link}\n"
         
         try:
             response = requests.post(
@@ -781,8 +839,8 @@ Your Friendly Response:"""
                         "temperature": 0.7,  # Natural conversation
                         "top_k": 40,         # Balanced creativity
                         "top_p": 0.9,        # Balanced coherence
-                        "num_predict": 60,   # DRASTICALLY Reduced for speed (was 100)
-                        "num_ctx": 256       # DRASTICALLY Reduced context (was 512)
+                        "num_predict": 512,  # Increased for complete responses (was 60)
+                        "num_ctx": 2048      # Increased for better memory (was 256)
                     }
                 },
                 timeout=120,  # Increased to 120s to prevent timeouts on complex/slow queries
@@ -871,7 +929,7 @@ Your Friendly Response:"""
         
         # Greetings (Flexible Regex Matching)
         import re
-        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]* $"
+        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]*$"
         
         if re.match(greetings_pattern, query.lower()):
             greeting_response = "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today!"
@@ -891,6 +949,14 @@ Your Friendly Response:"""
         # Check knowledge base first
         kb_answer = self._check_knowledge_base(query)
         if kb_answer:
+            # Append topic-based navigation links to KB answers
+            topic_links = self._get_topic_links(query)
+            if topic_links:
+                links_section = "\n\n📌 **Quick Links:**\n"
+                for tl in topic_links:
+                    links_section += f"• [{tl['title']}]({tl['url']})\n"
+                kb_answer = kb_answer + links_section
+
             if not stream:
                 # Cache knowledge base answers
                 query_key = query.lower().strip()
@@ -909,16 +975,25 @@ Your Friendly Response:"""
         # Retrieve relevant documents
         docs = self._hybrid_retrieve(query, top_k=3)
         
+        # Calculate real confidence from retrieval scores
+        if docs:
+            avg_score = sum(d.get('relevance_score', 0) for d in docs) / len(docs)
+            confidence = max(0, min(100, int(avg_score * 100)))
+        else:
+            confidence = 0
+        
         # Generate response
         if stream:
-            yield {"type": "metadata", "source": "RAG"}
+            yield {"type": "metadata", "source": "RAG", "confidence": confidence}
             # Streaming mode: yield chunks
             for chunk in self._generate_response(query, docs, language, stream=True):
                 yield chunk
         else:
             # Non-streaming mode: return complete response
             response = self._generate_response(query, docs, language, stream=False)
-            return {"response": response, "source": "RAG"} if return_dict else response
+            if return_dict:
+                return {"response": response, "source": "RAG", "confidence": confidence}
+            return response
 
 
 if __name__ == '__main__':
