@@ -23,13 +23,18 @@ def convert_to_ultrarag_format(input_path, output_path):
     converted_count = 0
     with open(output_path, 'w', encoding='utf-8') as f:
         for idx, chunk in enumerate(chunks):
+            # Extract metadata safely
+            meta = chunk.get('metadata', {})
+            source = chunk.get('source') or meta.get('source') or 'unknown'
+            url = chunk.get('url') or meta.get('url') or ''
+            
             # Create UltraRAG document
             doc = {
                 "id": f"doc_{idx}",
                 "contents": chunk.get('text', ''),
                 "metadata": {
-                    "source": chunk.get('source', 'unknown'),
-                    "url": chunk.get('url', ''),
+                    "source": source,
+                    "url": url,
                     "original_index": idx
                 }
             }
@@ -38,7 +43,7 @@ def convert_to_ultrarag_format(input_path, output_path):
             f.write(json.dumps(doc, ensure_ascii=False) + '\n')
             converted_count += 1
     
-    print(f"✓ Converted {converted_count} documents to {output_path}")
+    print(f"Done: Converted {converted_count} documents to {output_path}")
     return converted_count
 
 def verify_conversion(jsonl_path):
@@ -54,10 +59,10 @@ def verify_conversion(jsonl_path):
                 assert 'contents' in doc, f"Missing 'contents' in line {line_num}"
                 count += 1
             except Exception as e:
-                print(f"✗ Error on line {line_num}: {e}")
+                print(f"Error on line {line_num}: {e}")
                 return False
     
-    print(f"✓ Verified {count} documents - all valid!")
+    print(f"Done: Verified {count} documents - all valid!")
     return True
 
 if __name__ == '__main__':
@@ -82,4 +87,4 @@ if __name__ == '__main__':
     if args.verify:
         verify_conversion(args.output)
     
-    print(f"\n✓ Conversion complete! Output: {args.output}")
+    print(f"\nDone: Conversion complete! Output: {args.output}")

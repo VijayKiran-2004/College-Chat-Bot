@@ -17,7 +17,7 @@ class SQLSystem:
         self.conn = sqlite3.connect(db_path, check_same_thread=False) # Helper for threading
         
         # Ollama Configuration
-        self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'gemma2:2b')
+        self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'llama3.2:3b')
         self.ollama_url = ollama_url or os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
         
         # Get table schema
@@ -40,12 +40,24 @@ class SQLSystem:
         if roll_match:
             entities['roll_no'] = roll_match.group(1)
         
-        # Extract branch (department)
-        branches = ['ce', 'cse', 'ece', 'eee', 'me', 'it']
-        for branch in branches:
-            # Use word boundary to avoid partial matches (e.g. 'placed' -> 'ce')
-            if re.search(r'\b' + branch + r'\b', query_lower):
-                entities['branch'] = branch.upper()
+        # Extract branch (department) - comprehensive list with aliases
+        branch_aliases = {
+            'cse': 'CSE', 'computer science': 'CSE', 'cs': 'CSE',
+            'cse-aiml': 'CSE-AIML', 'aiml': 'CSE-AIML', 'ai': 'CSE-AIML', 'ml': 'CSE-AIML',
+            'artificial intelligence': 'CSE-AIML', 'machine learning': 'CSE-AIML',
+            'cse-ds': 'CSE-DS', 'csd': 'CSE-DS', 'data science': 'CSE-DS',
+            'csm': 'CSM',
+            'ece': 'ECE', 'electronics': 'ECE', 'electronics and communication': 'ECE',
+            'eee': 'EEE', 'electrical': 'EEE', 'electronics and electrical': 'EEE',
+            'me': 'ME', 'mech': 'ME', 'mechanical': 'ME', 'mechanical engineering': 'ME',
+            'ce': 'CE', 'civil': 'CE', 'civil engineering': 'CE',
+            'it': 'IT', 'information technology': 'IT',
+            'mba': 'MBA', 'management': 'MBA',
+        }
+        # Sort by length descending so longer aliases match first (e.g., 'data science' before 'data')
+        for alias in sorted(branch_aliases.keys(), key=len, reverse=True):
+            if re.search(r'\b' + re.escape(alias) + r'\b', query_lower):
+                entities['branch'] = branch_aliases[alias]
                 break
         
         # Extract name (capitalized words)
@@ -115,6 +127,37 @@ class SQLSystem:
         # Increased limit for better aggregation
         base_query += " LIMIT 1000"
         return base_query
+    
+    def _validate_sql(self, sql_query):
+        """Safety filter: validate SQL query to prevent destructive operations.
+        
+        Returns:
+            tuple: (is_safe: bool, reason: str)
+        """
+        if not sql_query or not sql_query.strip():
+            return False, "Empty SQL query"
+        
+        sql_upper = sql_query.strip().upper()
+        
+        # Block destructive operations
+        blocked_keywords = ['DROP', 'DELETE', 'ALTER', 'UPDATE', 'INSERT', 'CREATE', 'TRUNCATE', 'REPLACE', 'ATTACH', 'DETACH']
+        for keyword in blocked_keywords:
+            if re.search(r'\b' + keyword + r'\b', sql_upper):
+                return False, f"Blocked: '{keyword}' operations are not allowed"
+        
+        # Only allow SELECT statements
+        if not sql_upper.lstrip().startswith('SELECT'):
+            return False, "Only SELECT queries are allowed"
+        
+        # Ensure query targets the students table
+        if 'STUDENTS' not in sql_upper:
+            return False, "Query must target the 'students' table"
+        
+        # Enforce LIMIT cap to prevent full-table dumps
+        if 'LIMIT' not in sql_upper:
+            sql_query = sql_query.rstrip().rstrip(';') + ' LIMIT 1000'
+        
+        return True, sql_query
 
     def _generate_sql(self, query):
         """Generate SQL query using LLM"""
@@ -237,9 +280,21 @@ SQL:"""
             sql_query = self._generate_sql(query)
             if not sql_query:
                  return "I couldn't understand the student query. Please specify student ID, name, department, or conditions."
+            # Post-validate LLM-generated SQL
+            is_safe, result = self._validate_sql(sql_query)
+            if not is_safe:
+                print(f"  [SQL Safety] LLM query blocked: {result}")
+                return "I couldn't safely process that query. Please try rephrasing with specific student details."
+            sql_query = result  # Use potentially modified query (with LIMIT added)
         else:
              # Build SQL query from regex entities
              sql_query = self.build_sql_query(entities)
+             # Validate regex-built query too (defense in depth)
+             is_safe, result = self._validate_sql(sql_query)
+             if not is_safe:
+                 print(f"  [SQL Safety] Regex query blocked: {result}")
+                 return "Error processing query. Please try again."
+             sql_query = result
         
         try:
             # Execute query

@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.5.0] - February 2026
+
+### Added
+- **`scripts/tkrcet_scraper.py`**: Advanced AI-powered scraper using Playwright and Groq API. Structures raw web text into clean JSON sections.
+- **`scripts/prepare_data.py`**: Pre-processing script to flatten complex scraper output for the vectorization pipeline.
+- **`tkrcet_links.txt`**: Unified source link list for the scraping pipeline.
+- **Metrics fix**: Fixed 'kb_encoder' path in `backend.py`, enabling automated accuracy/relevance scoring for all responses.
+
+### Changed
+- **Scraping Workflow**: Replaced legacy Selenium/CSV workflow with a modern Playwright/Groq/JSON pipeline for 10x higher data quality.
+- **Backend CORS**: Permissive CORS policy (`*`) enabled to allow local `file://` access and dynamic origin development.
+- **Request Models**: `QueryRequest` expanded with `language` support and increased message length (1000 chars).
+- **Documentation**: All guides (`README`, `QUICK_START`, `Codebase_Reference`) synchronized with the v3.5 "Intelligence Injection" architecture.
+
+### Fixed
+- **'UltraRAGSystem' object has no attribute 'kb_encoder'**: Corrected metrics calculation path in `backend.py`.
+- **400 Bad Request (OPTIONS)**: Fixed CORS origin rejection by allowing all origins for local development.
+
+---
+
+## [3.2.0] - February 2026
+
+### Added
+- **SQL Safety Filter**: `_validate_sql()` blocks DROP/DELETE/ALTER/UPDATE/INSERT/TRUNCATE. Only SELECT queries on the `students` table are allowed. Enforces LIMIT 1000 cap.
+- **`scripts/generate_vectors.py`**: New script that generates `unified_vectors.json` from `scraped_data.jsonl` + `faq_rows.json` with text chunking and deduplication.
+- **`tests/` directory**: All test files moved here from root (`test_gender.py`, `test_llm_sql.py`, `test_router_upgrade.py`, `test_typo.py`, `test_logging_integration.py`, `run_batch_test.py`).
+- **`tools/` directory**: Log analysis scripts moved here (`analyze_logs.py`, `refresh_logs.py`, `read_recent_logs.py`).
+
+### Changed
+- **Intent Detector**: Removed keyword-based fallback (`student_keywords`, `general_keywords`, `_regex_detect_intent`). Now uses embeddings-only: Regex greetings → Gemma 3 1B → Semantic similarity → default 'general'.
+- **SQL Entity Detection**: Expanded from 6 departments to 17 aliases (CSE-AIML, CSE-DS, CSM, MBA, etc.) with natural language aliases like "data science", "artificial intelligence".
+- **Scraper** (`scrape.py`): Structured extraction using `<main>`, `<article>`, `.content` containers instead of raw body text. Strips nav/footer/sidebar noise. Adds URL deduplication.
+- **Config** (`ultrarag_config.yaml`): Fixed mismatches — model `llama3.2:3b`, collection `college_data`, top_k `3`, max_tokens `512`, num_ctx `2048`.
+- **Requirements**: Pinned `langchain-experimental==0.0.65`, `langchain-huggingface==0.0.3`, `scikit-learn`, `transformers` to fix installation conflicts.
+- **`verify_codebase.py`**: Updated to reflect moved/deleted files.
+
+### Removed
+- `app/services/prompt_construction.py` (unused in production)
+- `scripts/setup_student_database.py` (replaced by direct DB setup)
+- `scripts/migrate_csv_to_excel.py` (one-time migration, no longer needed)
+- `scripts/clean_and_fill.py` (superseded by cleanup_database.py)
+- `analyze_csv.py` (referenced non-existent files)
+
+---
+
 ## [3.1.0] - February 2026
 
 ### Added
@@ -54,7 +99,7 @@ All notable changes to this project will be documented in this file.
   - Created `CHANGELOG.md`
 
 ### Changed
-- **LLM Model**: Switched from Gemma 3:1b to Gemma 2:2b (2x faster)
+- **LLM Model**: Switched from Gemma 3:1b to Gemma 2:2b (2x faster) — later replaced by Llama 3.2:3b in v3.2
 - **Context Window**: Reduced from 2048 to 1024 tokens (40% speed boost)
 - **Temperature**: Lowered to 0.1 for more deterministic responses
 - **Max Predictions**: Reduced from 250 to 150 tokens for faster generation
@@ -91,12 +136,12 @@ All notable changes to this project will be documented in this file.
 | Scope Validation | ❌ None | ✅ Multi-layer |
 | Off-topic Handling | ❌ Inconsistent | ✅ Reliable rejection |
 | Greeting Detection | ⚠️ Basic | ✅ Enhanced |
-| LLM Model | Gemma 3:1b | Gemma 2:2b |
+| LLM Model | Gemma 3:1b | Llama 3.2:3b |
 | Response Speed | ⚠️ Moderate | ✅ 2x faster |
 | Test Coverage | ❌ None | ✅ 89% success |
 | Documentation | ⚠️ Outdated | ✅ Complete |
 
 ---
 
-**Current Version**: 3.1.0  
+**Current Version**: 3.5.0  
 **Status**: Production Ready ✅

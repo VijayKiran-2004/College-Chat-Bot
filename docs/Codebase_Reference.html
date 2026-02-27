@@ -283,7 +283,7 @@
         <h1>📚 College Chat Bot</h1>
         <h2>Full Codebase Reference Document</h2>
         <p class="meta">Project: TKR College of Engineering &amp; Technology (TKRCET) AI Chatbot<br>
-            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Generated: February 2026</p>
+            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Generated: February 2026 (v3.5 Update)</p>
     </div>
 
     <div class="container">
@@ -303,7 +303,8 @@
                 <li><a href="#frontend">Frontend</a></li>
                 <li><a href="#docs">Docs Directory</a></li>
                 <li><a href="#logs">Logs Directory</a></li>
-                <li><a href="#test-files">Test &amp; Utility Files</a></li>
+                <li><a href="#tools">Tools (Log Analysis & Maintenance)</a></li>
+                <li><a href="#test-files">Tests Directory</a></li>
                 <li><a href="#notebooks">Jupyter Notebooks</a></li>
                 <li><a href="#pipeline">Full Data Pipeline Flow</a></li>
                 <li><a href="#run-order">What to Run &amp; In What Order</a></li>
@@ -356,7 +357,8 @@
                 <li><strong>sentence-transformers</strong> — Text embedding model</li>
                 <li><strong>langchain, langchain-community</strong> — AI agent orchestration</li>
                 <li><strong>pandas, openpyxl</strong> — Data processing and Excel logging</li>
-                <li><strong>selenium, webdriver-manager</strong> — Web scraping</li>
+                <li><strong>playwright</strong> — Modern web scraping with JavaScript support</li>
+                <li><strong>groq</strong> — High-speed LPU inference for data extraction</li>
                 <li><strong>requests</strong> — HTTP calls to Ollama AI model</li>
             </ul>
             <div class="generates"><strong>📤 Generates / Used for:</strong> Run
@@ -520,15 +522,22 @@
         <div class="file-card">
             <span class="file-path">app/services/intent_detector.py</span><span class="file-type">Python — NLP
                 Classifier</span>
-            <h4>IntentDetector — Understanding What the User Wants</h4>
-            <p>Uses keyword matching and regular expressions to classify a user query into one of four categories
-                WITHOUT needing an AI model (making it very fast).</p>
-            <ul>
-                <li>Looks for <strong>student keywords</strong>: cgpa, attendance, marks, roll number, placed…</li>
-                <li>Looks for <strong>general keywords</strong>: college, hod, principal, fee, hostel, syllabus…</li>
-                <li>Detects <strong>student IDs</strong> via number patterns (e.g., 5–10 digit numbers)</li>
-                <li>Detects <strong>conditions</strong> like "cgpa &gt; 8.5" using regex</li>
-            </ul>
+            <h4>IntentDetector — Understanding What the User Wants (Embeddings-Based)</h4>
+            <p>Uses a <strong>multi-tier approach</strong> to classify user queries into one of four categories.
+                Keyword-based detection has been removed in favor of AI-powered embeddings.</p>
+            <h4 style="margin-top:14px;">Detection Pipeline (in priority order):</h4>
+            <ol style="padding-left:20px;margin-top:8px;">
+                <li><strong>Regex greetings</strong> — instant pattern match for "hi", "hello", etc. (no AI needed)</li>
+                <li><strong>Gemma 3 1B routing</strong> — lightweight AI model (<code>gemma3:1b</code> via Ollama)
+                    classifies intent in ~10ms</li>
+                <li><strong>Semantic similarity fallback</strong> — uses <code>all-MiniLM-L6-v2</code> sentence
+                    embeddings to find closest intent by cosine similarity</li>
+                <li><strong>Default to 'general'</strong> — safest fallback if no detection method is available</li>
+            </ol>
+            <div class="note">💡 <strong>Recent change:</strong> Legacy keyword lists (<code>student_keywords</code>,
+                <code>general_keywords</code>) and the regex-based <code>_regex_detect_intent()</code> method have been
+                removed. All intent detection now uses AI embeddings or the Gemma router.
+            </div>
             <div class="generates"><strong>📤 Generates:</strong> Returns a string label — <code>'greeting'</code>,
                 <code>'student'</code>, <code>'general'</code>, or <code>'hybrid'</code> — used by
                 <code>QueryRouter</code>.
@@ -591,22 +600,33 @@
         <div class="file-card">
             <span class="file-path">app/services/sql_system.py</span><span class="file-type">Python — SQL Query
                 Engine</span>
-            <h4>SQLSystem — Student Database Query Handler</h4>
+            <h4>SQLSystem — Student Database Query Handler (with Safety Filter)</h4>
             <p>Connects to <code>app/database/students.db</code> (SQLite) and answers questions about students. Converts
-                natural language into SQL queries either via regex entity extraction or via an LLM (Gemma 2B model via
+                natural language into SQL queries either via regex entity extraction or via an LLM (Llama 3.2:3b model
+                via
                 Ollama).</p>
 
             <h4 style="margin-top:14px;">Query processing pipeline:</h4>
             <ul>
-                <li><strong>Entity extraction</strong>: Detects roll number, branch, name, CGPA condition, placement
+                <li><strong>Entity extraction</strong>: Detects roll number, branch (17 aliases including CSE-AIML,
+                    CSE-DS, CSM, MBA), name, CGPA condition, placement
                     status, gender from the query text</li>
                 <li><strong>SQL generation</strong>: Builds a <code>SELECT</code> query from extracted entities OR asks
-                    Gemma2:2b to write the SQL</li>
+                    Llama 3.2:3b to write the SQL</li>
+                <li><strong>Safety filter (<code>_validate_sql()</code>)</strong>: Blocks destructive operations (DROP,
+                    DELETE, ALTER, UPDATE, INSERT, TRUNCATE). Only allows SELECT queries targeting the students table.
+                    Enforces LIMIT 1000 cap.</li>
+                <li><strong>Post-validation</strong>: Both LLM-generated and regex-built queries pass through the safety
+                    filter before execution</li>
                 <li><strong>Privacy protection</strong>: Returns only aggregate summaries (counts, averages) for general
                     queries — never dumps individual student records</li>
                 <li><strong>Special cases</strong>: Top recruiting companies query, context-aware follow-up questions
                 </li>
             </ul>
+
+            <h4 style="margin-top:14px;">Supported department aliases:</h4>
+            <p>CSE, CSE-AIML (AI/ML/artificial intelligence), CSE-DS (data science), CSM, ECE (electronics), EEE
+                (electrical), ME (mechanical), CE (civil), IT (information technology), MBA (management)</p>
 
             <h4 style="margin-top:14px;">Student table columns handled:</h4>
             <p>ROLL NO, NAME, BRANCH, CGPA, ATTENDANCE, COMPANY PLACED, GENDER, SECTION, YEAR, PASSED YEAR, SEMESTER</p>
@@ -675,21 +695,7 @@
                 chat interaction.</div>
         </div>
 
-        <div class="file-card">
-            <span class="file-path">app/services/prompt_construction.py</span><span class="file-type">Python — Prompt
-                Engineering</span>
-            <h4>Prompt Builder — Structures Questions for the AI Model</h4>
-            <p>Contains three helper functions that build the text prompt sent to Ollama. A well-structured prompt
-                yields better answers. This file is a utility — called internally by <code>ultra_rag.py</code>.</p>
-            <ul>
-                <li><code>build_context_prompt()</code> — General query prompt with retrieved docs + history</li>
-                <li><code>build_person_query_prompt()</code> — Stricter prompt for "who is the HOD?" type questions;
-                    prevents AI from making up names</li>
-                <li><code>build_general_prompt()</code> — Balanced general-purpose prompt</li>
-            </ul>
-            <div class="generates"><strong>📤 Generates:</strong> A formatted string (the prompt) that is sent to the
-                Ollama API. Does not produce any files.</div>
-        </div>
+        <!-- prompt_construction.py has been REMOVED — it was unused in production code -->
 
         <!-- ===== SECTION 5: CONFIG ===== -->
         <h2 class="section-title" id="app-config">5. App / Config</h2>
@@ -698,9 +704,41 @@
             <span class="file-path">app/config/ultrarag_config.yaml</span><span class="file-type">YAML —
                 Configuration</span>
             <h4>UltraRAG System Configuration</h4>
-            <p>A configuration file in YAML format that stores settings for the RAG system such as the Ollama model
-                name, API URL, corpus path, ChromaDB path, and embedding model name. Allows changing settings without
-                touching Python code.</p>
+            <p>A configuration file in YAML format that stores settings for the RAG system. Key current values:</p>
+            <table>
+                <tr>
+                    <th>Setting</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Model</td>
+                    <td><code>llama3.2:3b</code></td>
+                </tr>
+                <tr>
+                    <td>Embedding</td>
+                    <td><code>all-MiniLM-L6-v2</code></td>
+                </tr>
+                <tr>
+                    <td>Collection</td>
+                    <td><code>college_data</code></td>
+                </tr>
+                <tr>
+                    <td>Top K</td>
+                    <td>3</td>
+                </tr>
+                <tr>
+                    <td>Temperature</td>
+                    <td>0.3</td>
+                </tr>
+                <tr>
+                    <td>Max Tokens</td>
+                    <td>512</td>
+                </tr>
+                <tr>
+                    <td>Context Window</td>
+                    <td>2048</td>
+                </tr>
+            </table>
             <div class="generates"><strong>📤 Generates:</strong> No output — read by <code>ultra_rag.py</code> at
                 startup to configure itself.</div>
         </div>
@@ -717,11 +755,10 @@
             <ul>
                 <li>Contains columns: ROLL NO, NAME, BRANCH, CGPA, ATTENDANCE, COMPANY PLACED, GENDER, YEAR, SEMESTER,
                     PASSED YEAR, SECTION</li>
-                <li>Populated by running <code>scripts/setup_student_database.py</code></li>
                 <li>Source data comes from <code>data/rawdata/student_dataset.xlsx</code></li>
             </ul>
-            <div class="generates"><strong>📤 Generates:</strong> This IS the generated output of
-                <code>setup_student_database.py</code>. Powers all student queries.
+            <div class="generates"><strong>📤 Generates:</strong> Powers all student queries. Protected by the SQL
+                safety filter.
             </div>
         </div>
 
@@ -754,21 +791,41 @@
             (or periodically) to prepare data for the chatbot. They are NOT part of the live server.</p>
 
         <div class="file-card">
-            <span class="file-path">scripts/scrape.py</span><span class="file-type">Python — Step 1: Web Scraper</span>
-            <h4>TKRCET Website Scraper</h4>
-            <p>The <strong>first step</strong> in the data pipeline. Reads a list of TKRCET website URLs from
-                <code>data/rawdata/ACP-links.csv</code>, opens each page with a headless Chrome browser (Selenium),
-                extracts all text content, and saves it as JSONL.
+            <span class="file-path">scripts/tkrcet_scraper.py</span><span class="file-type">Python — Step 1: Smart
+                Scraper</span>
+            <h4>TKRCET AI-Powered Scraper (Groq + Playwright)</h4>
+            <p>The <strong>first step</strong> in the modern data pipeline. Reads a list of TKRCET website URLs from
+                <code>tkrcet_links.txt</code>, opens each page with a headless Chromium browser (Playwright),
+                extracts <strong>clean text</strong>, and uses the <strong>Groq API</strong> to structure it into JSON.
             </p>
             <ul>
                 <li>Uses <strong>4 parallel threads</strong> for fast scraping</li>
                 <li>Waits 2 seconds per page for JavaScript to load</li>
-                <li>Extracts page title + full body text</li>
+                <li><strong>Structured extraction</strong>: targets <code>&lt;main&gt;</code>,
+                    <code>&lt;article&gt;</code>, <code>.content</code> containers instead of raw body text
+                </li>
+                <li><strong>Noise removal</strong>: strips nav, footer, header, script, style, sidebar elements</li>
+                <li>Extracts headings (h1-h3) separately for context</li>
+                <li><strong>Idempotent</strong>: clears output file before writing; URL deduplication within each run
+                </li>
             </ul>
+            <div class="generates"><strong>📤 Generates:</strong> <code>all_results.json</code>
+                — a comprehensive JSON file containing structured sections for every page on the college website.
+            </div>
+            <div class="note">⚠️ Requires Groq API Key + Playwright. Run:
+                <code>python scripts/tkrcet_scraper.py</code>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">scripts/prepare_data.py</span><span class="file-type">Python — Step 1.5: Data
+                Flattener</span>
+            <h4>RAG Data Preparation Script</h4>
+            <p>Converts the complex nested JSON output from the AI scraper into a flattened text format suitable for
+                vectorization.
+                Ensures that every section and list item is correctly preserved as searchable text.</p>
             <div class="generates"><strong>📤 Generates:</strong> <code>app/database/vectordb/scraped_data.jsonl</code>
-                — one JSON object per scraped page, containing its URL, title, and text content.</div>
-            <div class="note">⚠️ Requires Chrome browser + Selenium + active internet connection. Run:
-                <code>python scripts/scrape.py</code>
+                — serves as the transition point to the vectorization pipeline.
             </div>
         </div>
 
@@ -809,25 +866,26 @@
         </div>
 
         <div class="file-card">
-            <span class="file-path">scripts/setup_student_database.py</span><span class="file-type">Python — DB
-                Setup</span>
-            <h4>Student Database Creator</h4>
-            <p>One-time setup script that reads <code>data/rawdata/student_dataset.xlsx</code> and imports it into the
-                SQLite database <code>app/database/students.db</code>, creating the <code>students</code> table with all
-                columns.</p>
-            <div class="generates"><strong>📤 Generates:</strong> <code>app/database/students.db</code> — the SQLite
-                student database file used by <code>SQLSystem</code>.</div>
+            <span class="file-path">scripts/generate_vectors.py</span><span class="file-type">Python — Step 1.5: Vector
+                Generator</span>
+            <h4>Unified Vectors Generator</h4>
+            <p>Reads <code>scraped_data.jsonl</code> and <code>data/rawdata/faq_rows.json</code>, chunks text content
+                with sentence-boundary splitting and overlap, deduplicates, and outputs the master
+                <code>unified_vectors.json</code> file.
+            </p>
+            <ul>
+                <li><strong>Idempotent</strong>: overwrites output file on each run</li>
+                <li>Text cleaning: removes nav/footer noise, normalizes whitespace</li>
+                <li>Chunking: 500-character max with 50-char overlap at sentence boundaries</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong>
+                <code>app/database/vectordb/unified_vectors.json</code>
+                — consumed by <code>corpus_converter.py</code>.
+            </div>
+            <div class="note">Run after scrape.py: <code>python scripts/generate_vectors.py</code></div>
         </div>
 
-        <div class="file-card">
-            <span class="file-path">scripts/clean_and_fill.py</span><span class="file-type">Python — Data Cleaner</span>
-            <h4>Student Data Cleaner &amp; Filler</h4>
-            <p>Pre-processes the raw student Excel file before importing into the database. Handles missing values,
-                standardizes column formats, fills placeholder data, and normalizes text fields like branch names and
-                gender.</p>
-            <div class="generates"><strong>📤 Generates:</strong> A cleaned version of the Excel file or directly
-                updates the SQLite database with clean records.</div>
-        </div>
+        <!-- setup_student_database.py, clean_and_fill.py, migrate_csv_to_excel.py have been REMOVED -->
 
         <div class="file-card">
             <span class="file-path">scripts/cleanup_database.py</span><span class="file-type">Python — Data
@@ -847,7 +905,6 @@
                 (and a <code>.backup</code> file). Use this to "push" manual data fixes into the system.</div>
         </div>
 
-
         <div class="file-card">
             <span class="file-path">scripts/clear_vectordb.py</span><span class="file-type">Python — Maintenance</span>
             <h4>Vector Database Cleaner</h4>
@@ -857,29 +914,6 @@
             <div class="generates"><strong>📤 Generates:</strong> Removes data from
                 <code>app/database/vectordb/chroma/</code>. Nothing is created.
             </div>
-        </div>
-
-
-
-        <div class="file-card">
-            <span class="file-path">scripts/migrate_csv_to_excel.py</span><span class="file-type">Python —
-                Migration</span>
-            <h4>CSV to Excel Converter</h4>
-            <p>One-time migration script that converts a CSV-format student dataset into the Excel (.xlsx) format
-                expected by <code>setup_student_database.py</code>.</p>
-            <div class="generates"><strong>📤 Generates:</strong> <code>data/rawdata/student_dataset.xlsx</code> from a
-                source CSV file.</div>
-        </div>
-
-
-
-        <div class="file-card">
-            <span class="file-path">scripts/run_batch_test.py</span><span class="file-type">Python — Testing</span>
-            <h4>Batch Query Tester</h4>
-            <p>Runs a predefined list of test questions through the full chatbot pipeline and records the responses.
-                Used to evaluate chatbot response quality across different question types before a release.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Prints responses to terminal or saves to a test
-                results file.</div>
         </div>
 
 
@@ -1015,8 +1049,40 @@
 
 
 
-        <!-- ===== SECTION 12: TEST FILES ===== -->
-        <h2 class="section-title" id="test-files">12. Test &amp; Utility Files (Root Level)</h2>
+        <!-- ===== SECTION 12A: TOOLS ===== -->
+        <h2 class="section-title" id="tools">12. Tools Directory (Log Analysis &amp; Maintenance)</h2>
+        <p style="margin-bottom:18px;color:#555;">These files live in <code>tools/</code> and contain utilities for log
+            analysis and maintenance.</p>
+
+        <div class="file-card">
+            <span class="file-path">tools/analyze_logs.py</span><span class="file-type">Python — Analytics</span>
+            <h4>Detailed Log Analyzer</h4>
+            <p>The primary tool for analyzing chatbot performance. Reads <code>logs/response_log.xlsx</code> and
+                produces a thorough report including response time distribution, slow query detection, and accuracy
+                patterns.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Detailed report printed to the terminal.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">tools/refresh_logs.py</span><span class="file-type">Python — Utility</span>
+            <h4>Log Refresh Utility</h4>
+            <p>Refreshes or resets the response log Excel file — clearing it to start fresh logging.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Archives or recreates
+                <code>logs/response_log.xlsx</code>.
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">tools/read_recent_logs.py</span><span class="file-type">Python — Utility</span>
+            <h4>Recent Log Reader</h4>
+            <p>Reads and displays the most recent entries from the response log file for quick inspection.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Recent log entries printed to the terminal.</div>
+        </div>
+
+        <!-- ===== SECTION 13: TEST FILES ===== -->
+        <h2 class="section-title" id="test-files">13. Tests Directory</h2>
+        <p style="margin-bottom:18px;color:#555;">Test files live in <code>tests/</code> and can be run from the project
+            root.</p>
 
         <div class="file-card">
             <span class="file-path">terminal_chat.py</span><span class="file-type">Python — CLI Interface</span>
@@ -1037,38 +1103,10 @@
                 component.</div>
         </div>
 
-        <div class="file-card">
-            <span class="file-path">analyze_csv.py</span><span class="file-type">Python — Analytics</span>
-            <h4>Student CSV Data Analyzer</h4>
-            <p>Analyzes the raw student dataset CSV/Excel file and prints summary statistics: total students,
-                branch-wise counts, placement totals, CGPA distribution, etc. Useful for understanding the data before
-                importing.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Printed statistics report in the terminal.</div>
-        </div>
-
-
+        <!-- analyze_csv.py, detailed_log_analysis.py, refresh_logs.py removed — moved to tools/ -->
 
         <div class="file-card">
-            <span class="file-path">detailed_log_analysis.py</span><span class="file-type">Python — Analytics</span>
-            <h4>Detailed Log Analyzer</h4>
-            <p>The primary tool for analyzing chatbot performance. Reads <code>logs/response_log.xlsx</code> and
-                produces
-                a thorough report including response time distribution, slow query detection, and accuracy patterns.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Detailed report printed to the terminal.</div>
-        </div>
-
-        <div class="file-card">
-            <span class="file-path">refresh_logs.py</span><span class="file-type">Python — Utility</span>
-            <h4>Log Refresh Utility</h4>
-            <p>Refreshes or resets the response log Excel file — either archiving old data or clearing it to start fresh
-                logging. Useful before a new testing session.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Archives or recreates
-                <code>logs/response_log.xlsx</code>.
-            </div>
-        </div>
-
-        <div class="file-card">
-            <span class="file-path">test_gender.py</span><span class="file-type">Python — Unit Test</span>
+            <span class="file-path">tests/test_gender.py</span><span class="file-type">Python — Unit Test</span>
             <h4>Gender Query Test</h4>
             <p>Tests that gender-based SQL queries work correctly — e.g., "show all female students" or "how many male
                 students are placed?" Verifies the regex entity extractor handles gender keywords properly.</p>
@@ -1076,16 +1114,16 @@
         </div>
 
         <div class="file-card">
-            <span class="file-path">test_llm_sql.py</span><span class="file-type">Python — Unit Test</span>
+            <span class="file-path">tests/test_llm_sql.py</span><span class="file-type">Python — Unit Test</span>
             <h4>LLM-based SQL Generation Test</h4>
-            <p>Tests the fallback SQL generation path — where Gemma2:2b is asked to write the SQL query. Verifies the
+            <p>Tests the fallback SQL generation path — where Llama 3.2:3b is asked to write the SQL query. Verifies the
                 LLM produces valid SQLite syntax for various question types.</p>
             <div class="generates"><strong>📤 Generates:</strong> Test queries and generated SQL printed to terminal.
             </div>
         </div>
 
         <div class="file-card">
-            <span class="file-path">test_logging_integration.py</span><span class="file-type">Python — Integration
+            <span class="file-path">tests/test_logging_integration.py</span><span class="file-type">Python — Integration
                 Test</span>
             <h4>Logging Integration Test</h4>
             <p>End-to-end test that sends a query through the full pipeline and verifies it was correctly written to the
@@ -1096,7 +1134,7 @@
         </div>
 
         <div class="file-card">
-            <span class="file-path">test_router_upgrade.py</span><span class="file-type">Python — Integration
+            <span class="file-path">tests/test_router_upgrade.py</span><span class="file-type">Python — Integration
                 Test</span>
             <h4>Query Router Upgrade Test</h4>
             <p>Tests that the <code>QueryRouter</code> correctly classifies and routes different types of queries to the
@@ -1106,15 +1144,24 @@
         </div>
 
         <div class="file-card">
-            <span class="file-path">test_typo.py</span><span class="file-type">Python — Unit Test</span>
+            <span class="file-path">tests/test_typo.py</span><span class="file-type">Python — Unit Test</span>
             <h4>Typo Handling Test</h4>
             <p>Tests the chatbot's robustness to spelling mistakes and typos — e.g., "Who s the principel?" — verifying
                 the intent detector and KB still return correct results.</p>
             <div class="generates"><strong>📤 Generates:</strong> Test results printed to terminal.</div>
         </div>
 
-        <!-- ===== SECTION 13: NOTEBOOKS ===== -->
-        <h2 class="section-title" id="notebooks">13. Jupyter Notebooks</h2>
+        <div class="file-card">
+            <span class="file-path">tests/run_batch_test.py</span><span class="file-type">Python — Testing</span>
+            <h4>Batch Query Tester</h4>
+            <p>Runs a predefined list of test questions through the full chatbot pipeline and records the responses.
+                Used to evaluate chatbot response quality across different question types before a release.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Prints responses to terminal or saves to a test
+                results file.</div>
+        </div>
+
+        <!-- ===== SECTION 14: NOTEBOOKS ===== -->
+        <h2 class="section-title" id="notebooks">14. Jupyter Notebooks</h2>
 
 
 
@@ -1128,35 +1175,38 @@
                 development and debugging individual components.</div>
         </div>
 
-        <!-- ===== SECTION 14: PIPELINE FLOW ===== -->
-        <h2 class="section-title" id="pipeline">14. Full Data Pipeline Flow</h2>
+        <!-- ===== SECTION 15: PIPELINE FLOW ===== -->
+        <h2 class="section-title" id="pipeline">15. Full Data Pipeline Flow</h2>
         <div class="arch-box">
             <p>This shows the complete one-time setup process to get the chatbot ready from scratch:</p>
             <br>
             <div class="arch-flow">
-                <div class="arch-node">① data/rawdata/ACP-links.csv<br><small style="font-weight:300">(URL list —
-                        manual)</small></div>
+                <div class="arch-node">① tkrcet_links.txt<br><small style="font-weight:300">(URL list)</small></div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">② scripts/scrape.py<br><small style="font-weight:300">(Selenium scraper)</small>
+                <div class="arch-node">② scripts/tkrcet_scraper.py<br><small style="font-weight:300">(AI
+                        scraper)</small>
                 </div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">③ vectordb/scraped_data.jsonl<br><small style="font-weight:300">(raw
-                        pages)</small></div>
+                <div class="arch-node">③ all_results.json<br><small style="font-weight:300">(structured
+                        knowledge)</small></div>
             </div>
             <div class="arch-flow" style="margin-top:12px;">
-                <div class="arch-node">④ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
+                <div class="arch-node">④ scripts/prepare_data.py<br><small style="font-weight:300">(flatten search
+                        context)</small></div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑤ scripts/generate_vectors.py<br><small
+                        style="font-weight:300">(chunking)</small></div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑥ unified_vectors.json</div>
+                <div class="arch-arrow">→</div>
+                <div class="arch-node">⑥ scripts/corpus_converter.py</div>
+            </div>
+            <div class="arch-flow" style="margin-top:12px;">
+                <div class="arch-node">⑦ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
                         ChromaDB)</small></div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">⑤ vectordb/chroma/<br><small style="font-weight:300">(vector DB —
+                <div class="arch-node">⑧ vectordb/chroma/<br><small style="font-weight:300">(vector DB —
                         searchable)</small></div>
-            </div>
-            <div class="arch-flow" style="margin-top:12px;">
-                <div class="arch-node">⑥ data/rawdata/student_dataset.xlsx<br><small style="font-weight:300">(student
-                        data — manual)</small></div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-node">⑦ scripts/setup_student_database.py</div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-node">⑧ database/students.db<br><small style="font-weight:300">(SQLite)</small></div>
             </div>
             <div class="arch-flow" style="margin-top:12px;">
                 <div class="arch-node">⑨ python backend.py</div>
@@ -1168,8 +1218,8 @@
             </div>
         </div>
 
-        <!-- ===== SECTION 15: WHAT TO RUN ===== -->
-        <h2 class="section-title" id="run-order">15. What to Run &amp; In What Order</h2>
+        <!-- ===== SECTION 16: WHAT TO RUN ===== -->
+        <h2 class="section-title" id="run-order">16. What to Run &amp; In What Order</h2>
         <table>
             <tr>
                 <th>#</th>
@@ -1191,8 +1241,8 @@
             </tr>
             <tr>
                 <td>3</td>
-                <td><code>ollama pull gemma2:2b</code></td>
-                <td>Download Gemma AI model (for SQL)</td>
+                <td><code>ollama pull gemma3:1b</code></td>
+                <td>Download Gemma 3 model (for intent routing)</td>
                 <td>First time setup only</td>
             </tr>
             <tr>
@@ -1203,27 +1253,27 @@
             </tr>
             <tr>
                 <td>5</td>
-                <td><code>python scripts/cleanup_database.py</code></td>
-                <td>Fix data issues & inject FAQs</td>
-                <td>To apply manual knowledge fixes</td>
+                <td><code>python scripts/generate_vectors.py</code></td>
+                <td>Generate unified_vectors.json from scraped + FAQ data</td>
+                <td>After scraping</td>
             </tr>
             <tr>
                 <td>6</td>
-                <td><code>python scripts/ingest.py</code></td>
-                <td>Build the ChromaDB vector database</td>
-                <td>After scraping</td>
+                <td><code>python scripts/cleanup_database.py</code></td>
+                <td>Fix data issues &amp; inject FAQs</td>
+                <td>To apply manual knowledge fixes</td>
             </tr>
             <tr>
                 <td>7</td>
                 <td><code>python scripts/corpus_converter.py</code></td>
                 <td>Convert to UltraRAG format</td>
-                <td>After ingestion or cleanup</td>
+                <td>After vector generation or cleanup</td>
             </tr>
             <tr>
                 <td>8</td>
-                <td><code>python scripts/setup_student_database.py</code></td>
-                <td>Import student Excel data into SQLite</td>
-                <td>First time & when data updates</td>
+                <td><code>python scripts/ingest.py</code></td>
+                <td>Build the ChromaDB vector database</td>
+                <td>After corpus conversion</td>
             </tr>
             <tr>
                 <td>9</td>
@@ -1245,8 +1295,8 @@
             </tr>
         </table>
 
-        <!-- ===== SECTION 16: TROUBLESHOOTING ===== -->
-        <h2 class="section-title" id="troubleshooting">16. Troubleshooting &amp; Common Issues</h2>
+        <!-- ===== SECTION 17: TROUBLESHOOTING ===== -->
+        <h2 class="section-title" id="troubleshooting">17. Troubleshooting &amp; Common Issues</h2>
         <div class="file-card">
             <h4>Common Errors &amp; Solutions</h4>
             <table>

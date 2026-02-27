@@ -16,7 +16,6 @@ except ImportError:
 modules_to_check = [
     # Core Services
     "app.services.intent_detector",
-    "app.services.prompt_construction",
     "app.services.chain",
     "app.services.sql_system",
     "app.services.ultra_rag",
@@ -32,13 +31,11 @@ unsafe_scripts = [
     "scripts/corpus_converter.py",
     "scripts/ingest.py",
     "scripts/scrape.py",
-    "scripts/setup_student_database.py",
-    "scripts/sql.py",
     # Tests
-    "test_gender.py",
-    "test_llm_sql.py",
-    "test_router_upgrade.py",
-    "test_typo.py"
+    "tests/test_gender.py",
+    "tests/test_llm_sql.py",
+    "tests/test_router_upgrade.py",
+    "tests/test_typo.py"
 ]
 
 print("="*60)

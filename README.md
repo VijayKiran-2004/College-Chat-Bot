@@ -20,7 +20,8 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 - **Embeddings**: all-MiniLM-L6-v2
 - **Vector DB**: ChromaDB (Semantic Search)
 - **Structured DB**: SQLite + Pandas (for Student Data)
-- **Routing**: Gemma 3 1B + Regex-based Intent Detection
+- **Routing**: Gemma 3 1B (intent routing) + Semantic Similarity (embeddings-based fallback)
+- **SQL Safety**: Built-in safety filter blocks destructive queries (DROP, DELETE, etc.)
 - **Backend**: FastAPI with SSE streaming
 - **Frontend**: HTML/CSS/JS with Tailwind CSS, Marked.js
 
@@ -67,29 +68,30 @@ pip install -r requirements.txt
 
 ### 4. Configure Ollama (Critical)
 1. Install [Ollama](https://ollama.com/).
-2. Pull the model:
+2. Pull the required models:
    ```bash
    ollama pull llama3.2:3b
+   ollama pull gemma3:1b
    ```
 3. Keep Ollama running in the background (`ollama serve`).
 
 ### 5. Data Setup (Crucial Step)
 Since raw data is not checked into git, you must generate it locally:
 
-**A. Create Student Database (SQL)**
+**A. Scrape College Data (Web)**
 ```bash
-python scripts/setup_student_database.py
+python scripts/tkrcet_scraper.py
 ```
-*Creates `app/database/students.db` from Excel data.*
+*Advanced AI-powered scraper using Playwright and Groq API. Extracts 80+ pages with structured semantic cleaning. Requires Chrome.*
 
-**B. Scrape College Data (Web)**
+**B. Generate Unified Vectors**
 ```bash
-python scripts/scrape.py
+python scripts/generate_vectors.py
 ```
-*Scrapes 90+ pages from the college website to `app/database/vectordb/scraped_data.jsonl`. Requires Chrome.*
+*Chunks and combines scraped data + FAQ data into `unified_vectors.json`.*
 
 ### 6. Ingest Data (Vector DB)
-Now, process the scraped data into the Vector Database:
+Now, process the data into the Vector Database:
 ```bash
 python scripts/ingest.py
 ```
@@ -99,7 +101,7 @@ python scripts/ingest.py
 ```bash
 python scripts/corpus_converter.py
 ```
-*(Specifices the JSONL corpus required for UltraRAG)*
+*(Generates the JSONL corpus required for UltraRAG)*
 
 ### 7. Run the Chatbot
 
@@ -205,14 +207,26 @@ college-buddy/
 ├── app/
 │   ├── services/
 │   │   ├── ultra_rag.py           # General Info Engine (RAG) + Topic Links
-│   │   ├── sql_system.py          # Student Data Engine (SQL)
-│   │   ├── intent_detector.py     # Router Logic
+│   │   ├── sql_system.py          # Student Data Engine (SQL + Safety Filter)
+│   │   ├── intent_detector.py     # Embeddings-based Intent Routing
 │   │   ├── query_router.py        # Main Controller
 │   │   └── chain.py               # Chain-of-Thought handling
+│   ├── config/
+│   │   └── ultrarag_config.yaml   # RAG system configuration
 │   ├── database/
 │   │   ├── students.db            # SQLite Student DB
 │   │   └── vectordb/              # ChromaDB Storage + Corpus
 │
+├── scripts/
+│   ├── tkrcet_scraper.py      # Advanced Web scraper (Playwright + Groq)
+│   ├── tkrcet_links.txt       # Unified link list for scraping
+│   ├── prepare_data.py        # Flattens nested JSON into RAG format
+│   ├── generate_vectors.py    # Unified vectors generator (chunking)
+│   ├── corpus_converter.py    # JSON → JSONL converter
+│   └── ingest.py              # ChromaDB ingestion
+│
+├── tests/                         # Unit & integration tests
+├── tools/                         # Log analysis & maintenance
 ├── frontend/
 │   └── index.html                 # Web Chat UI (SSE + Link Chips)
 ├── backend.py                     # FastAPI Server (REST API + SSE)
@@ -223,7 +237,7 @@ college-buddy/
 ```
 
 ## Privacy & Security
-- **Student Data**: The SQL system is designed to provide *aggregate* summaries for general queries (e.g., "count of students") to protect privacy. Individual records are only shown for specific ID lookups.
+- **Student Data**: The SQL system includes a safety filter (`_validate_sql()`) that blocks destructive operations (DROP, DELETE, ALTER, etc.). Only SELECT queries on the students table are allowed. Results are returned as *aggregate* summaries (counts, averages) for general queries to protect privacy.
 - **Local Processing**: All data stays on your local machine.
 
 ## Team
@@ -236,5 +250,5 @@ college-buddy/
 - **Praneetha**: Testing
 
 ---
-**Version**: 3.1.0 (Hybrid Edition)
+**Version**: 3.5.0 (Intelligence Injection Edition)
 **Status**: Production Ready ✅

@@ -1,0 +1,325 @@
+{
+  "sections": [
+    {
+      "title": "Transport",
+      "content": "All Buses Will Reach College By 9.15 A.M In The Morning And Start 4.50PM In The Evening."
+    },
+    {
+      "title": "ROUTE NO: 1 ---UPPAL-NGOS",
+      "content": {
+        "driver": "PRASAD",
+        "mobile": "8008660490",
+        "routes": [
+          {
+            "area": "NARAPALLY",
+            "time": "8:00",
+            "amount": "35000"
+          },
+          {
+            "area": "MEDIPALLY",
+            "time": "8:10"
+          },
+          {
+            "area": "UPPAL X ROAD",
+            "time": "8:30"
+          },
+          {
+            "area": "NAGOLE",
+            "time": "8:35",
+            "amount": "27000"
+          },
+          {
+            "area": "MANSOORABAD",
+            "time": "8:45"
+          },
+          {
+            "area": "SAHARA ESTATES",
+            "time": "8:50"
+          },
+          {
+            "area": "SUSHMA THEATRE",
+            "time": "9:00"
+          },
+          {
+            "area": "GANESH TEMPLE",
+            "time": "9:05"
+          },
+          {
+            "area": "BN REDDY NAGAR",
+            "time": "9:10"
+          }
+        ]
+      }
+    },
+    {
+      "title": "ROUTE NO: 2 --- MEHDIPATNAM",
+      "content": {
+        "driver": "MADHU",
+        "mobile": "9908873042",
+        "routes": [
+          {
+            "area": "EESHWAR THEATRE, ATTAPUR",
+            "time": "8:00",
+            "amount": "35000"
+          },
+          {
+            "area": "MEHDIPATNAM",
+            "time": "8:05"
+          },
+          {
+            "area": "LAKIDIKAPOOL",
+            "time": "8:10"
+          },
+          {
+            "area": "HYDERGUDA",
+            "time": "8:20"
+          },
+          {
+            "area": "OLD MLA QUARTERS",
+            "time": "8:25"
+          },
+          {
+            "area": "NARAYANGUDA SIGNAL",
+            "time": "8:30"
+          },
+          {
+            "area": "KOTI",
+            "time": "8:35"
+          },
+          {
+            "area": "NALGONDA X ROAD",
+            "time": "8:40",
+            "amount": "27000"
+          },
+          {
+            "area": "CHENCHAL GUDA X ROAD",
+            "time": "8:45"
+          },
+          {
+            "area": "SAIDABAD",
+            "time": "8:55"
+          },
+          {
+            "area": "SANTOSH NAGAR",
+            "time": "9:00"
+          },
+          {
+            "area": "OWAISI",
+            "time": "9:05"
+          }
+        ]
+      }
+    },
+    {
+      "title": "ROUTE NO: 3 --- MALKAJGIRI",
+      "content": {
+        "driver": "RAJNIKANTH",
+        "mobile": "9989493803",
+        "routes": [
+          {
+            "area": "NEREDMET X ROAD",
+            "time": "8:00",
+            "amount": "35000"
+          },
+          {
+            "area": "SAFILGUDA",
+            "time": "8:05"
+          },
+          {
+            "area": "MALKAJGIRI",
+            "time": "8:10"
+          },
+          {
+            "area": "ANAND BAGH",
+            "time": "8:15"
+          },
+          {
+            "area": "METTUGUDA",
+            "time": "8:25"
+          },
+          {
+            "area": "TARNAKA",
+            "time": "8:30"
+          },
+          {
+            "area": "UPPAL X ROAD",
+            "time": "8:35"
+          },
+          {
+            "area": "RAMANTHAPUR",
+            "time": "8:40"
+          },
+          {
+            "area": "GADDIANNARAM",
+            "time": "8:55",
+            "amount": "27000"
+          },
+          {
+            "area": "SAROORNAGAR KATTA",
+            "time": "9:00"
+          },
+          {
+            "area": "SKARMANGHAT",
+            "time": "9:05"
+          }
+        ]
+      }
+    },
+    {
+      "title": "ROUTE NO: 4",
+      "content": {
+        "driver": "NAGABUSHANAM",
+        "mobile": "9948382601",
+        "routes": [
+          {
+            "area": "HAYATH NAGAR",
+            "time": "8:30",
+            "amount": "27000"
+          },
+          {
+            "area": "BHAGYALATHA X ROAD",
+            "time": "8:35"
+          },
+          {
+            "area": "SUSHMA THEATRE",
+            "time": "8:40"
+          },
+          {
+            "area": "RYTHU BAZAAR",
+            "time": "8:45"
+          },
+          {
+            "area": "SHIVA SINDU",
+            "time": "8:50"
+          },
+          {
+            "area": "VAIDEHI NAGAR",
+            "time": "8:55"
+          },
+          {
+            "area": "B N REDDY",
+            "time": "9:00"
+          },
+          {
+            "area": "HASTINAPURAM",
+            "time": "9:05"
+          }
+        ]
+      }
+    },
+    {
+      "title": "ROUTE NO: 5",
+      "content": {
+        "driver": "K SURESH",
+        "mobile": "9959175988",
+        "routes": [
+          {
+            "area": "ALWAL",
+            "time": "8:00",
+            "amount": "35000"
+          },
+          {
+            "area": "TRIMULGHERRY",
+            "time": "8:10"
+          },
+          {
+            "area": "JBS",
+            "time": "8:20"
+          },
+          {
+            "area": "RAIL NILAYAM",
+            "time": "8:25"
+          },
+          {
+            "area": "TARNAKA",
+            "time": "8:30"
+          },
+          {
+            "area": "HABSIGUDA",
+            "time": "8:35"
+          },
+          {
+            "area": "SURVEY OF INDIA",
+            "time": "8:40"
+          },
+          {
+            "area": "UPPAL",
+            "time": "8:45"
+          },
+          {
+            "area": "NAGOLE",
+            "time": "8:55",
+            "amount": "27000"
+          },
+          {
+            "area": "L B NAGAR",
+            "time": "9:05"
+          }
+        ]
+      }
+    },
+    {
+      "title": "ROUTE NO: 6",
+      "content": {
+        "driver": "BUSHAN",
+        "mobile": "8008530283",
+        "routes": [
+          {
+            "area": "LALA PET – TARANAKA",
+            "time": "8:00",
+            "amount": "35000"
+          },
+          {
+            "area": "SITHAPALMANDI",
+            "time": "8:05"
+          },
+          {
+            "area": "WARASIGUDA",
+            "time": "8:10"
+          },
+          {
+            "area": "MUSHEERABAD",
+            "time": "8:15"
+          },
+          {
+            "area": "RTC X ROAD",
+            "time": "8:20"
+          },
+          {
+            "area": "RAM NAGAR",
+            "time": "8:25"
+          },
+          {
+            "area": "VIDYA NAGAR",
+            "time": "8:30"
+          },
+          {
+            "area": "6” NUMBER",
+            "time": "8:35"
+          },
+          {
+            "area": "SRI RAMA THEATRE",
+            "time": "8:35"
+          },
+          {
+            "area": "MUSRAMBAGH TV TOWER",
+            "time": "8:45",
+            "amount": "27000"
+          },
+          {
+            "area": "DILSUKH NAGAR",
+            "time": "8:50"
+          },
+          {
+            "area": "CHAITANYA PURI",
+            "time": "8:55"
+          },
+          {
+            "area": "L B NAGAR",
+            "time": "9:05"
+          }
+        ]
+      }
+    }
+  ]
+}

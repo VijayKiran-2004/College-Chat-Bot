@@ -1,0 +1,117 @@
+{
+    "personnel": {
+        "principal": "Dr. D. V. Ravi Shankar",
+        "vice_principal": "Dr. A. Suresh Rao (also HoD of CSE & Dean Academics)",
+        "dean_academics": "Dr. A. Suresh Rao (also Vice Principal & HoD of CSE)",
+        "secretary": "Dr. T. Harinath Reddy",
+        "chairman": "Sri. Teegala Krishna Reddy",
+        "hod": {
+            "cse": "Dr. A. Suresh Rao",
+            "cse-aiml": "Dr. B. Sunil Srinivas",
+            "csm": "Dr. B. Sunil Srinivas",
+            "cse-ds": "Dr. V. Krishna",
+            "csd": "Dr. V. Krishna",
+            "ece": "Dr. D. Nageshwar Rao",
+            "eee": "Dr. K. Raju",
+            "it": "Dr. R. Muruanantham",
+            "mech": "Mr. D. Rushi Kumar",
+            "civil": "Mr. K.V.R Satya Sai",
+            "mba": "Dr. K. Gyaneswari"
+        }
+    },
+    "timings": {
+        "working_hours": "9:40 AM to 4:20 PM (Monday-Saturday)",
+        "lunch_break": "12:40 PM to 1:20 PM"
+    },
+    "history": {
+        "established": "2002",
+        "affiliation": "JNTUH (Jawaharlal Nehru Technological University Hyderabad)",
+        "status": "Autonomous (UGC confirmed)",
+        "location": "Meerpet, Hyderabad - 500097, Telangana",
+        "campus_size": "20 acres"
+    },
+    "society": {
+        "name": "TKR Educational Society",
+        "full_form": "Teegala Krishna Reddy",
+        "colleges": [
+            "TKR College of Engineering and Technology (TKRCET) - Autonomous",
+            "Teegala Krishna Reddy Engineering College (TKREC)",
+            "TKR College of Pharmacy (TKRCOP)",
+            "TKR Institute of Management and Science (TKRIMS)"
+        ],
+        "chairman": "Sri. Teegala Krishna Reddy"
+    },
+    "admissions": {
+        "process": "Admissions are through TS EAPCET counseling for B.Tech, PGCET for M.Tech, and direct admission for MBA. Visit the admissions office or website for detailed procedure.",
+        "eligibility": "10+2 with Physics, Chemistry, and Mathematics for B.Tech. Graduation in relevant field for M.Tech/MBA.",
+        "contact": "Visit https://tkrcet.ac.in/admissions for admission details and fee structure."
+    },
+    "courses": {
+        "ug": [
+            "CSE",
+            "CSE-AIML",
+            "CSE-DS",
+            "ECE",
+            "EEE",
+            "IT",
+            "Mechanical",
+            "Civil"
+        ],
+        "pg": [
+            "M.Tech in CSE",
+            "M.Tech in Power Electronics",
+            "MBA"
+        ],
+        "total": "8 UG programs and 3 PG programs"
+    },
+    "facilities": {
+        "main": "State-of-the-art labs, smart classrooms, Wi-Fi campus, digital library, hostel (boys & girls), transport, sports ground, auditorium, NCC, incubation center, and medical facilities.",
+        "special": "Virtual labs, R&D center (21,000 sq ft), industry partnerships with ECIL and others.",
+        "transport": {
+            "details": "TKRCET provides a fleet of buses connecting all major parts of Hyderabad city to the campus. Transport is safe, reliable, and available for both students and staff.",
+            "routes": "Buses operate from Dilshuknagar, LB Nagar, Secunderabad, Uppal, Mehdipatnam, Kukatpally, and other key areas.",
+            "contact": "For specific route map and fee details, please visit the Transport Section in the Administrative Block."
+        },
+        "canteen": {
+            "name": "College Canteen",
+            "description": "The college canteen provides hygienic food, snacks, and beverages at subsidized rates. It is a clean and spacious area where students can relax and refuel.",
+            "menu": "South Indian, North Indian, Chinese snacks, and beverages.",
+            "timings": "Open during college hours (including lunch break)."
+        }
+    },
+    "activities": {
+        "ncc": {
+            "name": "National Cadet Corps (NCC)",
+            "description": "TKRCET has an active NCC unit that instills discipline, leadership, and patriotism."
+        },
+        "nss": {
+            "name": "National Service Scheme (NSS)",
+            "description": "The NSS unit organizes blood donation camps, village adoption programs, and environmental awareness campaigns."
+        },
+        "clubs": [
+            "Coding Club",
+            "Robotics Club",
+            "Cultural Club",
+            "Sports Club",
+            "Literary Club"
+        ]
+    },
+    "accreditation": {
+        "naac": "A+ Grade",
+        "nba": "NBA Accredited",
+        "approvals": "AICTE approved, UGC recognized 2(f) & 12(B)"
+    },
+    "fees": {
+        "btech": "Tuition fee for B.Tech is approximately ₹85,000 - ₹1,00,000 per year (depending on the quota and branch).",
+        "mtech": "Tuition fee for M.Tech is approximately ₹57,000 per year.",
+        "mba": "Tuition fee for MBA is approximately ₹50,000 per year.",
+        "hostel": "Hostel fee is roughly ₹70,000 - ₹80,000 per year (including food and accommodation).",
+        "transport": "Transport fee varies by route, typically between ₹20,000 to ₹35,000 per year."
+    },
+    "events": {
+        "technical_fest": "Shiznay (Annual Technical Fest)",
+        "annual_day": "Celebrated with cultural programs and award distributions.",
+        "sports_meet": "Organized annually covering cricket, basketball, volleyball, athletics, etc.",
+        "upcoming_events": "For information about upcoming events, please check the college website, notice boards, or contact the Student Activities Office."
+    }
+}
