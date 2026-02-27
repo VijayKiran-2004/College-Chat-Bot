@@ -26,6 +26,7 @@ MAX_WORKERS = 4  # Number of concurrent threads
 
 # Shared State
 url_queue = queue.Queue()
+processed_urls = set()  # Track processed URLs for deduplication
 lock = threading.Lock()
 
 # Fix Windows encoding
@@ -73,7 +74,7 @@ def load_urls_from_csv():
         print(f"❌ Error reading CSV: {e}")
 
 def extract_content(url):
-    """Use Selenium to render and extract text"""
+    """Use Selenium to render and extract STRUCTURED text (not raw body)"""
     driver = None
     try:
         driver = setup_driver()
@@ -82,23 +83,81 @@ def extract_content(url):
         # Wait slightly for JS
         time.sleep(2)
         
-        # Extract text
-        body_text = driver.find_element("tag name", "body").text
         title = driver.title
         
-        # Save data
+        # --- Structured Extraction ---
+        # Remove noise elements first
+        noise_selectors = ['nav', 'footer', 'header', 'script', 'style', 'noscript',
+                          '.sidebar', '.menu', '.nav', '.footer', '.header', '.cookie',
+                          '.popup', '.modal', '.advertisement', '#cookie', '#popup']
+        for selector in noise_selectors:
+            try:
+                elements = driver.find_elements("css selector", selector)
+                for el in elements:
+                    driver.execute_script("arguments[0].remove();", el)
+            except Exception:
+                pass
+        
+        # Try to find main content container first
+        content_text = ""
+        content_selectors = ['main', 'article', '.content', '.entry-content',
+                            '.page-content', '#content', '#main', '.post-content']
+        
+        for selector in content_selectors:
+            try:
+                container = driver.find_element("css selector", selector)
+                if container and len(container.text.strip()) > 100:
+                    content_text = container.text.strip()
+                    break
+            except Exception:
+                continue
+        
+        # Fallback to body if no content container found
+        if not content_text:
+            content_text = driver.find_element("tag name", "body").text
+        
+        # Extract headings for structure
+        headings = []
+        for tag in ['h1', 'h2', 'h3']:
+            try:
+                elements = driver.find_elements("tag name", tag)
+                headings.extend([el.text.strip() for el in elements if el.text.strip()])
+            except Exception:
+                pass
+        
+        # Clean up content
+        # Remove duplicate lines and excessive whitespace
+        lines = content_text.split('\n')
+        seen_lines = set()
+        cleaned_lines = []
+        for line in lines:
+            line = line.strip()
+            if line and line not in seen_lines and len(line) > 5:
+                seen_lines.add(line)
+                cleaned_lines.append(line)
+        
+        cleaned_content = '\n'.join(cleaned_lines)
+        
+        if len(cleaned_content) < 30:
+            print(f"  [SKIP] {url[:50]}... (no meaningful content)")
+            return
+        
+        # Save structured data
         doc = {
             "id": url,
             "title": title,
-            "contents": body_text,
+            "headings": headings[:10],  # Top 10 headings for context
+            "contents": cleaned_content,
             "source": url,
-            "type": "scraped_webpage"
+            "type": "scraped_webpage",
+            "structured": True
         }
         
         with lock:
+            processed_urls.add(url)
             with open(OUTPUT_FILE, 'a', encoding='utf-8') as f:
-                f.write(json.dumps(doc) + "\n")
-            print(f"✓ [EXTRACTED] {title[:30]}... ({len(body_text)} chars)")
+                f.write(json.dumps(doc, ensure_ascii=False) + "\n")
+            print(f"✓ [EXTRACTED] {title[:30]}... ({len(cleaned_content)} chars)")
             
     except Exception as e:
         print(f"[EXTRACT ERROR] {url}: {e}")
@@ -113,6 +172,12 @@ def worker():
             url = url_queue.get(timeout=3) # Wait short time since queue is pre-filled
         except queue.Empty:
             return # Exit if empty
+
+        # Skip already-processed URLs (dedup within run)
+        with lock:
+            if url in processed_urls:
+                url_queue.task_done()
+                continue
 
         extract_content(url)
         url_queue.task_done()

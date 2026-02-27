@@ -17,7 +17,7 @@ if sys.platform.startswith('win') and not isinstance(sys.stdout, io.TextIOWrappe
 
 
 class IntentDetector:
-    def __init__(self):
+    def __init__(self, semantic_model=None):
         """Initialize intent detector with Gemma 3 1B (Ollama) + semantic fallback"""
         
         self.ollama_url = os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
@@ -71,7 +71,7 @@ Reply ONLY: GREETING, STUDENT, or GENERAL"""
             from sentence_transformers import SentenceTransformer
             from sklearn.metrics.pairwise import cosine_similarity
             
-            self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+            self.semantic_model = semantic_model if semantic_model is not None else SentenceTransformer('all-MiniLM-L6-v2')
             
             intent_examples = {
                 'greeting': ["hi", "hello", "hey", "good morning", "how are you"],
@@ -106,26 +106,12 @@ Reply ONLY: GREETING, STUDENT, or GENERAL"""
         except Exception as e:
             print(f"  ⚠ Semantic fallback not available ({e})")
         
-        # Regex fallback keywords (always available as last resort)
-        self.student_keywords = [
-            'student', 'students', 'cgpa', 'attendance', 
-            'marks', 'grade', 'roll number', 'student id',
-            'section', 'batch', 'semester',
-            'companies', 'placed', 'recruiter', 'package',
-            'gpa', 'average'
-        ]
-        
-        self.general_keywords = [
-            'college', 'department', 'hod', 'principal',
-            'facility', 'library', 'hostel', 'admission',
-            'fee', 'course', 'program', 'timings', 'contact',
-            'placement', 'faculty', 'dean', 'ncc', 'nss',
-            'syllabus', 'curriculum', 'subjects', 'exam'
-        ]
+        # Note: Keyword-based fallback removed in favor of embeddings-only detection.
+        # Greetings still use regex (fast exact match).
     
     def detect_intent(self, query):
         """
-        Detect query intent. Priority: Regex greetings → Gemma 3 → Semantic → Regex
+        Detect query intent. Priority: Regex greetings → Gemma 3 → Semantic
         
         Returns: 'greeting', 'student', 'general', or 'hybrid'
         """
@@ -141,17 +127,17 @@ Reply ONLY: GREETING, STUDENT, or GENERAL"""
             try:
                 return self._gemma_detect_intent(query)
             except Exception as e:
-                print(f"  ⚠ Gemma routing failed ({e}), using fallback")
+                print(f"  ⚠ Gemma routing failed ({e}), using semantic fallback")
         
-        # Try semantic similarity fallback
+        # Semantic similarity fallback (embeddings-based)
         if self.use_semantic_fallback:
             try:
                 return self._semantic_detect_intent(query)
             except Exception as e:
-                print(f"  ⚠ Semantic routing failed ({e}), using regex")
+                print(f"  ⚠ Semantic routing failed ({e}), defaulting to general")
         
-        # Last resort: regex
-        return self._regex_detect_intent(query_lower)
+        # Default to 'general' when no detection method is available
+        return 'general'
     
     def _gemma_detect_intent(self, query):
         """Use Gemma 3 1B via Ollama for intent classification"""
@@ -189,7 +175,7 @@ Reply ONLY: GREETING, STUDENT, or GENERAL"""
             print(f"  [Gemma Router] Unexpected: '{result}', using fallback")
             if self.use_semantic_fallback:
                 return self._semantic_detect_intent(query)
-            return self._regex_detect_intent(query.lower())
+            return 'general'
         
         print(f"  [Gemma Router] '{query}' -> {intent}")
         return intent
@@ -209,27 +195,14 @@ Reply ONLY: GREETING, STUDENT, or GENERAL"""
         best_score = scores[best_intent]
         
         if best_score < 0.3:
-            return self._regex_detect_intent(query.lower())
+            # Low confidence — default to 'general' (safest fallback)
+            return 'general'
         
         # Check for hybrid
         if scores.get('student', 0) > 0.45 and scores.get('general', 0) > 0.45:
             return 'hybrid'
         
         return best_intent
-    
-    def _regex_detect_intent(self, query_lower):
-        """Regex-based last resort"""
-        has_student_keywords = any(kw in query_lower for kw in self.student_keywords)
-        has_general_keywords = any(kw in query_lower for kw in self.general_keywords)
-        has_student_id = bool(re.search(r'\b\d{5,10}\b', query_lower))
-        has_student_condition = bool(re.search(r'(cgpa|attendance)\s*[><= ]', query_lower))
-        
-        if (has_student_keywords or has_student_id or has_student_condition) and has_general_keywords:
-            return 'hybrid'
-        elif has_student_keywords or has_student_id or has_student_condition:
-            return 'student'
-        else:
-            return 'general'
     
     def extract_entities(self, query):
         """Extract entities from query (always uses regex)"""

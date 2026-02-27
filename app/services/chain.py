@@ -44,7 +44,7 @@ class DeepReasoningChain:
             )
         ]
         
-        # 3. Initialize LLM (Gemma 2 via Ollama)
+        # 3. Initialize LLM (Llama 3.2 via Ollama)
         llm = ChatOllama(
             model="llama3.2:3b",
             temperature=0, # Zero temp for precise tool use

@@ -1,4 +1,4 @@
-# Quick Start Guide - College Buddy v3.1
+# Quick Start Guide - College Buddy v3.5
 
 ## 🚀 Get Started in 3 Steps
 
@@ -16,8 +16,9 @@ pip install -r requirements.txt
 ### Step 2: Start Ollama
 
 ```bash
-# Pull the model (first time only)
+# Pull all models (first time only)
 ollama pull llama3.2:3b
+ollama pull gemma3:1b
 
 # Ollama should auto-start, verify with:
 ollama ps
@@ -106,9 +107,13 @@ pip install -r requirements.txt --force-reinstall
 
 ### 🔗 Navigation Links (February 2026)
 - ✅ Clickable link chips below responses linking to relevant TKRCET website pages
-- ✅ 28 topic keywords mapped to real TKRCET URLs (admissions, departments, placements, etc.)
-- ✅ Works in both SSE streaming and non-streaming response paths
-- ✅ KB fast-track responses also include navigation links
+- ✅ Topic keywords mapped to real TKRCET URLs
+- ✅ AI-powered scraper (Groq + Playwright) for high-quality link discovery
+
+### 🧠 Intelligence Injection (February 2026)
+- ✅ Automated Scraping Pipeline: `tkrcet_scraper.py`
+- ✅ Groq LPU Integration: Instant data extraction and structuring
+- ✅ Enhanced Metrics: Automated Accuracy/Faithfulness scoring in backend
 
 ### ✨ Scope Validation (January 2026)
 - ✅ Filters out non-college queries (math, science, general knowledge)
@@ -193,5 +198,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 3.1.0
-**Last Updated**: February 2026
+**Version**: 3.5.0
+**Last Updated**: February 2026 (Scraping & Ingestion Update)

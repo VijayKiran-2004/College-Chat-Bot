@@ -18,7 +18,7 @@ if sys.platform.startswith('win'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Configuration
-INPUT_FILE = "app/database/vectordb/scraped_data.jsonl"
+INPUT_FILE = "app/database/vectordb/corpus_ultrarag.jsonl"
 CHROMA_PATH = "app/database/vectordb/chroma"
 COLLECTION_NAME = "college_data"
 
@@ -75,7 +75,7 @@ def main():
         
         llm = None 
         # llm = ChatOllama(
-        #     model="gemma2:2b",
+        #     model="llama3.2:3b",
         #     temperature=0,
         #     base_url="http://localhost:11434"
         # )
@@ -94,7 +94,7 @@ def main():
         Cleaned Content:
         """)
         
-        print("✓ LLM Ready: gemma2:2b")
+        print("✓ LLM Ready: llama3.2:3b")
     except Exception as e:
         print(f"⚠ Warning: Could not initialize LLM ({e}). Proceeding with raw text.")
         llm = None
