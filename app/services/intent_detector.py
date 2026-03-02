@@ -50,22 +50,7 @@ GENERAL: Queries about college INFORMATION, processes, people, or facilities. Ex
 
 Reply ONLY: GREETING, STUDENT, or GENERAL"""
 
-        # Check Ollama availability for gemma3:1b
-        try:
-            resp = requests.post(
-                self.ollama_url,
-                json={"model": self.router_model, "prompt": "hi", "stream": False,
-                      "options": {"num_predict": 5, "temperature": 0}},
-                timeout=10
-            )
-            if resp.status_code == 200:
-                self.use_gemma_routing = True
-                print(f"  ✓ Gemma 3 1B router ready (via Ollama)")
-            else:
-                raise Exception(f"Ollama returned {resp.status_code}")
-        except Exception as e:
-            print(f"  ⚠ Gemma 3 1B not available ({e})")
-            
+
         # Load semantic fallback (always, as backup)
         try:
             from sentence_transformers import SentenceTransformer
@@ -106,8 +91,7 @@ Reply ONLY: GREETING, STUDENT, or GENERAL"""
         except Exception as e:
             print(f"  ⚠ Semantic fallback not available ({e})")
         
-        # Note: Keyword-based fallback removed in favor of embeddings-only detection.
-        # Greetings still use regex (fast exact match).
+
     
     def detect_intent(self, query):
         """

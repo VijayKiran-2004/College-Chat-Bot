@@ -52,21 +52,31 @@ class QueryRouter:
         # Detect intent
         intent = self.intent_detector.detect_intent(query)
         
-        # Handle greetings instantly (no RAG/SQL needed)
-        if intent == 'greeting':
-            return {
-                "response": "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today?",
-                "source": "Instant Response",
-                "accuracy": "100%"
-            }
-        
         # Override for specific keywords that might be misclassified as student queries (e.g., 'sports fest')
         general_keywords = ['fest', 'tournament', 'sports', 'event', 'club', 'campus', 'hostel', 'bus', 'transport']
         if any(keyword in query.lower() for keyword in general_keywords):
            intent = 'general'
         
-        if intent == 'general':
-            # Use RAG system only
+        if intent == 'greeting':
+            # Fast-track greetings: Skip RAG retrieval
+            result = self.rag_system(query, is_greeting=True, return_dict=True)
+            if isinstance(result, dict):
+                 response = result.get('response')
+                 source = result.get('source', 'Greeting Fast-track')
+                 confidence = result.get('confidence', 100)
+            else:
+                 response = result
+                 source = "Greeting Fast-track"
+                 confidence = 100
+            
+            return {
+                "response": response,
+                "source": source,
+                "accuracy": f"{confidence}%"
+            }
+
+        elif intent == 'general':
+            # Use RAG system normally
             result = self.rag_system(query, return_dict=True)
             if isinstance(result, dict):
                  response = result.get('response')

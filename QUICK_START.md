@@ -1,4 +1,4 @@
-# Quick Start Guide - College Buddy v3.5
+# Quick Start Guide - College Buddy v3.6
 
 ## 🚀 Get Started in 3 Steps
 
@@ -31,11 +31,6 @@ ollama ps
 python backend.py
 ```
 *Then open `frontend/index.html` in your browser. Server runs at `http://127.0.0.1:8000`*
-
-**Option B: Terminal Interface**
-```bash
-python terminal_chat.py
-```
 
 ---
 
@@ -103,7 +98,50 @@ pip install -r requirements.txt --force-reinstall
 
 ---
 
-## 📁 What's New in v3.1
+## 📊 Evaluation & Logs
+
+### Reset the log file (new session / fresh start)
+```bash
+python tools/refresh_logs.py
+```
+*Archives the current `logs/response_log.xlsx` with a timestamp and creates a clean one.*
+
+### Run the evaluation suite
+```bash
+python tests/prompt_test.py
+```
+*Runs all test prompts, scores them across 8 quality metrics, and saves results incrementally to the Evaluation sheet. You can safely Ctrl+C — results up to that point are not lost.*
+
+### Inspect logs
+```bash
+python inspect_logs.py
+```
+*Prints both the Production sheet (live query log) and the Evaluation sheet (test results) to the terminal.*
+
+### Generate the Metrics Reference PDF
+```bash
+.venv\Scripts\python.exe tools\generate_metrics_pdf.py
+```
+*Creates/updates `logs/Metrics_Reference.pdf` — a polished guide explaining every metric, its formula, and how to interpret the score.*
+
+### Log sheets explained
+| Sheet | Updated by | Key columns |
+|---|---|---|
+| Production | Every `/query` request | Timestamp, Query, Response, Time Taken (s), Source |
+| Evaluation | `prompt_test.py` | Latency (s), Server Time (s), Faithfulness %, Relevance %, Accuracy % + more |
+
+---
+
+## 📲 What's New
+
+
+### 📋 Logging & Evaluation Refinement — v3.6 (March 2026)
+- ✅ Production sheet simplified to 6 focused columns (Timestamp, Query, Response, Time Taken, Session, Source)
+- ✅ Evaluation sheet now records both **Latency (s)** (client round-trip) and **Server Time (s)** (pure backend time) side-by-side
+- ✅ `prompt_test.py` saves each result **immediately** after scoring — no data loss on interruption
+- ✅ New `tools/generate_metrics_pdf.py` generates a polished `logs/Metrics_Reference.pdf`
+- ✅ Greetings now bypass the full RAG pipeline for near-instant responses
+- ✅ `inspect_logs.py` fixed to display both Production and Evaluation sheets
 
 ### 🔗 Navigation Links (February 2026)
 - ✅ Clickable link chips below responses linking to relevant TKRCET website pages
@@ -113,7 +151,6 @@ pip install -r requirements.txt --force-reinstall
 ### 🧠 Intelligence Injection (February 2026)
 - ✅ Automated Scraping Pipeline: `tkrcet_scraper.py`
 - ✅ Groq LPU Integration: Instant data extraction and structuring
-- ✅ Enhanced Metrics: Automated Accuracy/Faithfulness scoring in backend
 
 ### ✨ Scope Validation (January 2026)
 - ✅ Filters out non-college queries (math, science, general knowledge)
@@ -126,12 +163,6 @@ pip install -r requirements.txt --force-reinstall
 - ✅ Reduced context window (40% speed boost)
 - ✅ Optimized prompt engineering
 - ✅ Cached indices for instant startup
-
-### 🛡️ Reliability Enhancements
-- ✅ Strict LLM prompt enforcement
-- ✅ Multi-layer scope validation
-- ✅ Comprehensive test suite
-- ✅ Better error handling
 
 ---
 
@@ -198,5 +229,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 3.5.0
-**Last Updated**: February 2026 (Scraping & Ingestion Update)
+**Version**: 3.6.0  
+**Last Updated**: March 2026 (Logging & Evaluation Refinement)

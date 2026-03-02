@@ -2,7 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.6.0] - March 2026
+
+### Added
+- **`tools/generate_metrics_pdf.py`**: New script that auto-generates `logs/Metrics_Reference.pdf` — a fully designed, multi-section reference guide explaining every evaluation metric (formula, plain-English explanation, score bands, and worked examples). Requires `reportlab` (install inside `.venv`).
+- **`logs/Metrics_Reference.pdf`**: Generated PDF reference guide covering all 11 metrics across 5 sections: Timing, Retrieval, LLM-as-Judge, Statistical, and Final Accuracy. Premium visual design with dark-navy cover, per-metric accent borders, and color-coded score interpretation tables.
+- **`Server Time (s)` column in Evaluation sheet**: The backend now includes `time_taken` in every API response (in the SSE `done` event for streaming, and in the JSON body for SQL responses). `prompt_test.py` captures this and writes it alongside the client-side `Latency (s)` column for a complete picture of where time is spent.
+- **Incremental save in `prompt_test.py`**: Results are now saved to the Evaluation sheet after **every single prompt** rather than at the end of the full test run. This prevents data loss on Ctrl+C or crash.
+- **`QueryResponse.time_taken` field**: Added to the Pydantic response model in `backend.py` so both streaming and non-streaming paths report server-side processing time.
+
+### Changed
+- **Production sheet simplified** (`logger_service.py`, `refresh_logs.py`): Removed heavy evaluation columns (Retrieval Confidence, Faithfulness, Answer Relevance, Cross-Validation, Link Validity, Accuracy) from the Production sheet. It now logs only 6 essential fields: `Timestamp`, `User Query`, `Bot Response`, `Time Taken (s)`, `Session ID`, `Source`.
+- **`log_async` refactored** (`backend.py`): Removed all metric recalculation (faithfulness, BERTScore, etc.) from the background logging task. It is now a thin wrapper around `logger_service.log_response`. All heavy evaluation is done exclusively by `prompt_test.py`.
+- **Evaluation sheet columns updated** (`logger_service.py`, `refresh_logs.py`, `prompt_test.py`): `EVAL_COLS` now includes `Server Time (s)` positioned after `Latency (s)`.
+- **`inspect_logs.py`**: Fixed to read all sheets (Production **and** Evaluation), not just the first sheet.
+- **Greeting handling optimised**: Greetings are now fast-tracked through the router, bypassing the full RAG pipeline entirely for near-instant responses.
+
+### Fixed
+- **Timing discrepancy explained and resolved**: `Time Taken (s)` (Production) is pure server time; `Latency (s)` (Evaluation) is total client round-trip. Both are now logged side-by-side with `Server Time (s)` so the difference is immediately visible.
+- **`refresh_logs.py` column mismatch**: `prod_cols` and `eval_cols` now exactly match `logger_service.py` — no more empty/shifted columns on fresh log creation.
+
+---
+
 ## [3.5.0] - February 2026
+
 
 ### Added
 - **`scripts/tkrcet_scraper.py`**: Advanced AI-powered scraper using Playwright and Groq API. Structures raw web text into clean JSON sections.

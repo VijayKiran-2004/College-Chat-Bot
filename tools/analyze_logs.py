@@ -1,78 +1,71 @@
 """
-Detailed Log Analysis Script
-Analyzes response logs to identify patterns and issues
+tools/analyze_logs.py — Production Log Analyser
+Reads logs/response_log.xlsx (Production sheet) and prints performance stats.
+Run: python tools/analyze_logs.py
 """
 import pandas as pd
+from pathlib import Path
 
-# Read the log file
-df = pd.read_excel('logs/response_log.xlsx')
+LOG = Path("logs/response_log.xlsx")
 
-print("=" * 80)
-print("DETAILED LOG ANALYSIS")
-print("=" * 80)
-print()
+# Production sheet columns: Timestamp | User Query | Bot Response |
+#                            Time Taken (s) | Session ID | Source
+TIME_COL   = "Time Taken (s)"
+QUERY_COL  = "User Query"
+SOURCE_COL = "Source"
 
-# Overall statistics
-print(f"Total queries: {len(df)}")
-print(f"Average response time: {df['Time Taken (s)'].mean():.2f}s")
-print(f"Median response time: {df['Time Taken (s)'].median():.2f}s")
-print()
 
-# Categorize by response time
-fast = df[df['Time Taken (s)'] < 1]
-moderate = df[(df['Time Taken (s)'] >= 1) & (df['Time Taken (s)'] < 10)]
-slow = df[(df['Time Taken (s)'] >= 10) & (df['Time Taken (s)'] < 50)]
-very_slow = df[df['Time Taken (s)'] >= 50]
+def main():
+    if not LOG.exists():
+        print("Log file not found. Run refresh_logs.py first.")
+        return
 
-print("Response Time Distribution:")
-print(f"  Fast (<1s):        {len(fast)} queries ({len(fast)/len(df)*100:.1f}%)")
-print(f"  Moderate (1-10s):  {len(moderate)} queries ({len(moderate)/len(df)*100:.1f}%)")
-print(f"  Slow (10-50s):     {len(slow)} queries ({len(slow)/len(df)*100:.1f}%)")
-print(f"  Very Slow (>50s):  {len(very_slow)} queries ({len(very_slow)/len(df)*100:.1f}%)")
-print()
+    df = pd.read_excel(LOG, sheet_name="Production")
 
-# Analyze by source
-print("Performance by Source:")
-for source in df['Source'].unique():
-    source_df = df[df['Source'] == source]
-    print(f"  {source}:")
-    print(f"    Count: {len(source_df)}")
-    print(f"    Avg time: {source_df['Time Taken (s)'].mean():.2f}s")
-    print(f"    Max time: {source_df['Time Taken (s)'].max():.2f}s")
-print()
+    if df.empty:
+        print("Production sheet is empty — no queries logged yet.")
+        return
 
-# Identify problematic queries
-print("=" * 80)
-print("PROBLEMATIC QUERIES (Should be fast but aren't)")
-print("=" * 80)
-print()
+    print("=" * 70)
+    print("PRODUCTION LOG ANALYSIS")
+    print("=" * 70)
+    print(f"Total queries logged : {len(df)}")
 
-# KB queries that should be instant
-kb_slow = df[(df['Source'] == 'RAG/Knowledge Base') & (df['Time Taken (s)'] > 10)]
-if len(kb_slow) > 0:
-    print("KB queries taking >10s (should be instant):")
-    for idx, row in kb_slow.iterrows():
-        print(f"  {row['Time Taken (s)']:.2f}s - {row['User Query']}")
-    print()
+    if TIME_COL in df.columns:
+        df[TIME_COL] = pd.to_numeric(df[TIME_COL], errors="coerce")
+        print(f"Average response time: {df[TIME_COL].mean():.2f}s")
+        print(f"Median response time : {df[TIME_COL].median():.2f}s")
+        print(f"Max response time    : {df[TIME_COL].max():.2f}s")
+        print()
 
-# System timeouts
-system_timeouts = df[df['Source'] == 'System']
-if len(system_timeouts) > 0:
-    print("System timeouts (queries that hit 70s limit):")
-    for idx, row in system_timeouts.iterrows():
-        print(f"  {row['Time Taken (s)']:.2f}s - {row['User Query']}")
-    print()
+        # Response-time distribution
+        fast      = df[df[TIME_COL] < 1]
+        moderate  = df[(df[TIME_COL] >= 1)  & (df[TIME_COL] < 10)]
+        slow      = df[(df[TIME_COL] >= 10) & (df[TIME_COL] < 50)]
+        very_slow = df[df[TIME_COL] >= 50]
+        n = len(df)
+        print("Response Time Distribution:")
+        print(f"  Fast     (< 1 s)  : {len(fast):4d}  ({len(fast)/n*100:.1f}%)")
+        print(f"  Moderate (1–10 s) : {len(moderate):4d}  ({len(moderate)/n*100:.1f}%)")
+        print(f"  Slow     (10–50s) : {len(slow):4d}  ({len(slow)/n*100:.1f}%)")
+        print(f"  Very Slow (>50s)  : {len(very_slow):4d}  ({len(very_slow)/n*100:.1f}%)")
+        print()
 
-# Queries that should hit KB but went to RAG
-kb_keywords = ['timings', 'address', 'location', 'principal', 'hod', 'chairman', 
-               'fee', 'transport', 'canteen', 'ncc', 'nss']
+    # Per-source breakdown
+    if SOURCE_COL in df.columns:
+        print("Performance by Source:")
+        for source in df[SOURCE_COL].dropna().unique():
+            sdf = df[df[SOURCE_COL] == source]
+            avg = sdf[TIME_COL].mean() if TIME_COL in df.columns else float("nan")
+            print(f"  {source:<20} count={len(sdf):4d}  avg={avg:.2f}s")
+        print()
 
-print("Queries with KB keywords that went to RAG/took long:")
-for idx, row in df.iterrows():
-    query_lower = row['User Query'].lower()
-    if any(keyword in query_lower for keyword in kb_keywords):
-        if row['Time Taken (s)'] > 5:
-            print(f"  {row['Time Taken (s)']:.2f}s - {row['User Query']} [{row['Source']}]")
+    # Recent 5 queries
+    print("Last 5 queries:")
+    cols = [c for c in [QUERY_COL, SOURCE_COL, TIME_COL] if c in df.columns]
+    print(df[cols].tail(5).to_string(index=False))
+    print("=" * 70)
 
-print()
-print("=" * 80)
+
+if __name__ == "__main__":
+    main()

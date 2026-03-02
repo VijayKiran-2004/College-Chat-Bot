@@ -1,6 +1,7 @@
 import os
 import json
 from pathlib import Path
+from app.services.embedding_service import get_embedding_model
 
 class Retriever:
     """Handles hybrid document retrieval using ChromaDB"""
@@ -32,12 +33,8 @@ class Retriever:
             chroma_db_path = self.project_root / 'app/database/vectordb/chroma'
             chroma_client = chromadb.PersistentClient(path=str(chroma_db_path))
             
-            # Use same embedding model as ingestion
-            ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-            
             collection = chroma_client.get_collection(
-                name="college_data",
-                embedding_function=ef
+                name="college_data"
             )
             print("✓ Connected to ChromaDB")
             return collection
@@ -53,8 +50,12 @@ class Retriever:
             return []
             
         try:
+            # Use shared model to encode query manually (avoids function conflict)
+            shared_model = get_embedding_model()
+            query_embeddings = shared_model.encode([query]).tolist()
+            
             results = self.collection.query(
-                query_texts=[query],
+                query_embeddings=query_embeddings,
                 n_results=top_k
             )
             

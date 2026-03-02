@@ -52,18 +52,26 @@ class LinkManager:
         links = []
         seen_urls = set()
         
+        # 1. Extract from documents
         for doc in docs[:5]:
             url = doc.get('metadata', {}).get('url', '')
             source = doc.get('metadata', {}).get('source', '')
-            link = source if source and source.startswith('http') else url
+            link_url = source if source and source.startswith('http') else url
             
-            if link and link not in seen_urls and link.startswith('http'):
-                seen_urls.add(link)
-                links.append(link)
+            if link_url and link_url not in seen_urls and link_url.startswith('http'):
+                seen_urls.add(link_url)
+                # For document links, we don't always have a title, so we'll use a placeholder
+                # or the domain in generator.py
+                links.append(link_url)
         
-        # If no document URLs found, use topic-based links
-        if not links and query:
+        # 2. Add topic-based links if we have room
+        if len(links) < 3 and query:
             topic_links = self.get_topic_links(query)
-            return topic_links  # Returns list of {title, url} dicts
+            for tl in topic_links:
+                if tl['url'] not in seen_urls:
+                    seen_urls.add(tl['url'])
+                    links.append(tl)
+                    if len(links) >= 3:
+                        break
         
         return links[:3]
