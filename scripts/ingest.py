@@ -18,7 +18,7 @@ if sys.platform.startswith('win'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 # Configuration
-INPUT_FILE = "app/database/vectordb/corpus_ultrarag.jsonl"
+INPUT_FILE = "data/chunks/corpus_ultrarag.jsonl"
 CHROMA_PATH = "app/database/vectordb/chroma"
 COLLECTION_NAME = "college_data"
 

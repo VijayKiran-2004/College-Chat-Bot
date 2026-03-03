@@ -11,8 +11,10 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 -  **Knowledge Base**: Instant answers for critical facts (personnel, timings, location).
 - ⚡ **Fast & Lightweight**: Runs efficiently on local hardware with minimal memory footprint.
 - 🗣️ **Natural Conversations**: Varied, friendly responses for common queries to avoid robotic answers.
-- 🔗 **Navigation Links**: Responses include clickable link chips to relevant TKRCET website pages (admissions, departments, placements, etc.).
+- 🔗 **Navigation Links**: Responses include clickable link chips to relevant TKRCET website pages.
 - 🌐 **Web Frontend**: Browser-based chat interface with SSE streaming, dark mode, voice I/O, and multi-language support.
+- 📋 **Dual-Sheet Logging**: Every production query is logged to `logs/response_log.xlsx` (Production sheet). Evaluation runs write full quality metrics to the Evaluation sheet — with both client-side Latency and server-side Time Taken recorded side-by-side.
+- 📄 **Metrics Reference PDF**: Auto-generated `logs/Metrics_Reference.pdf` documents every metric with formulas, plain-English explanations, and color-coded score bands.
 
 ## Tech Stack
 - **Language**: Python 3.8+
@@ -112,12 +114,6 @@ python backend.py
 ```
 *Server runs at `http://127.0.0.1:8000`*
 
-**Option B: Terminal Interface**
-For quick testing in the command line:
-```bash
-python terminal_chat.py
-```
-
 ## Usage Examples
 
 ### 🏢 General Queries (RAG)
@@ -143,8 +139,9 @@ The College Buddy system follows a hybrid architecture combining Retrieval-Augme
 
 ```mermaid
 graph TD
-    User([User]) <--> Interface[Terminal Interface]
-    Interface <--> Router[Query Router]
+    User([User]) <--> Frontend[Web Frontend HTML/JS]
+    Frontend <--> Backend[backend.py FastAPI]
+    Backend <--> Router[Query Router]
     Router --> Detector[Intent Detector]
     
     Detector -->|General| RAG[UltraRAG System]
@@ -210,6 +207,7 @@ college-buddy/
 │   │   ├── sql_system.py          # Student Data Engine (SQL + Safety Filter)
 │   │   ├── intent_detector.py     # Embeddings-based Intent Routing
 │   │   ├── query_router.py        # Main Controller
+│   │   ├── logger_service.py      # Excel log writer (Production + Evaluation sheets)
 │   │   └── chain.py               # Chain-of-Thought handling
 │   ├── config/
 │   │   └── ultrarag_config.yaml   # RAG system configuration
@@ -225,16 +223,46 @@ college-buddy/
 │   ├── corpus_converter.py    # JSON → JSONL converter
 │   └── ingest.py              # ChromaDB ingestion
 │
-├── tests/                         # Unit & integration tests
-├── tools/                         # Log analysis & maintenance
+├── tests/
+│   ├── prompt_test.py         # Evaluation suite — runs prompts, scores metrics,
+│   │                          # saves results incrementally to Evaluation sheet
+│   └── ...                    # Other unit & integration tests
+│
+├── tools/
+│   ├── refresh_logs.py        # Archives old log, creates fresh response_log.xlsx
+│   ├── generate_metrics_pdf.py# Generates logs/Metrics_Reference.pdf
+│   ├── inspect_logs.py        # Prints Production + Evaluation sheet contents
+│   └── ...                    # Other log utility scripts
+│
+├── logs/
+│   ├── response_log.xlsx      # Live log — Production & Evaluation sheets
+│   └── Metrics_Reference.pdf  # Auto-generated metrics documentation
+│
 ├── frontend/
-│   └── index.html                 # Web Chat UI (SSE + Link Chips)
-├── backend.py                     # FastAPI Server (REST API + SSE)
-├── terminal_chat.py               # CLI Chat Interface
-├── verify_codebase.py             # Diagnostic Tool
-├── requirements.txt               # Dependencies
-└── README.md                      # Documentation
+│   └── index.html             # Web Chat UI (SSE + Link Chips)
+├── backend.py                 # FastAPI Server (REST API + SSE + time_taken logging)
+├── terminal_chat.py           # CLI Chat Interface
+├── verify_codebase.py         # Diagnostic Tool
+├── requirements.txt           # Dependencies
+└── README.md                  # Documentation
 ```
+
+## Logging & Evaluation Architecture
+
+The system uses a two-sheet Excel log (`logs/response_log.xlsx`) to separate concerns:
+
+| Sheet | Purpose | Columns | When updated |
+|---|---|---|---|
+| **Production** | Live monitoring of all user queries | Timestamp, User Query, Bot Response, Time Taken (s), Session ID, Source | Every `/query` request |
+| **Evaluation** | Deep quality scoring from test runs | Timestamp, Prompt, Bot Answer, Source, Retrieval Confidence, Latency (s), Server Time (s), Faithfulness %, Relevance %, Completeness %, BERTScore F1 %, Link Validity, Accuracy % | `python tests/prompt_test.py` |
+
+**Timing metrics explained:**
+- `Time Taken (s)` — Server-side processing time (Production sheet)
+- `Latency (s)` — Total client round-trip time measured by the test script
+- `Server Time (s)` — Server time re-exported in the API response, captured in the Evaluation sheet
+
+To reset logs: `python tools/refresh_logs.py`  
+To generate the metrics reference PDF: `python tools/generate_metrics_pdf.py`
 
 ## Privacy & Security
 - **Student Data**: The SQL system includes a safety filter (`_validate_sql()`) that blocks destructive operations (DROP, DELETE, ALTER, etc.). Only SELECT queries on the students table are allowed. Results are returned as *aggregate* summaries (counts, averages) for general queries to protect privacy.
@@ -250,5 +278,44 @@ college-buddy/
 - **Praneetha**: Testing
 
 ---
-**Version**: 3.5.0 (Intelligence Injection Edition)
+
+## 🤝 Teammate Handoff / Fresh Start
+
+If you just received this codebase and want to rebuild the system from scratch (clear data and re-index), follow these steps:
+
+### 1. Reset everything
+```bash
+# 1. Clear the Vector Database (persistent indices)
+python scripts/clear_vectordb.py
+
+# 2. Reset the Conversation Logs (archives old ones)
+python tools/refresh_logs.py
+```
+
+### 2. Populate the Knowledge Base
+```bash
+# 3. Scrape fresh data from TKRCET website
+# (Requires Playwright: npx playwright install)
+python scripts/tkrcet_scraper.py
+
+# 4. Ingest and Index the data
+# (Builds the ChromaDB and FAISS search indices)
+python scripts/ingest.py
+```
+
+### 3. Run and Verify
+```bash
+# 5. Start the backend server
+python backend.py
+
+# 6. Open frontend/index.html in your browser
+# 7. (Optional) Run automated quality evaluation
+python tests/prompt_test.py
+```
+
+> [!TIP]
+> Make sure **Ollama** is running in the background with `llama3.2:3b` pulled!
+
+---
+**Version**: 3.6.0 (Logging & Evaluation Refinement)
 **Status**: Production Ready ✅

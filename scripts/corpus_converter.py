@@ -67,9 +67,9 @@ def verify_conversion(jsonl_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert unified_vectors.json to UltraRAG format')
-    parser.add_argument('--input', default='app/database/vectordb/unified_vectors.json',
+    parser.add_argument('--input', default='data/chunks/unified_vectors.json',
                         help='Input JSON file path')
-    parser.add_argument('--output', default='app/database/vectordb/corpus_ultrarag.jsonl',
+    parser.add_argument('--output', default='data/chunks/corpus_ultrarag.jsonl',
                         help='Output JSONL file path')
     parser.add_argument('--verify', action='store_true',
                         help='Verify the output file after conversion')

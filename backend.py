@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 import uuid
 import json
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from app.services.query_router import QueryRouter
 from app.services.logger_service import ResponseLogger
+from app.services.embedding_service import get_embedding_model
 
 # Initialize global logger
 response_logger = None
@@ -46,6 +47,7 @@ class QueryResponse(BaseModel):
     session_id: str
     source: Optional[str] = "Unknown"
     confidence: Optional[int] = None
+    time_taken: Optional[float] = None
 
 
 # ============================================================
@@ -68,6 +70,24 @@ async def lifespan(app: FastAPI):
     
     # Initialize Systems
     initialize_systems()
+    
+    # Warm-up Ollama in background to reduce first-query latency
+    if query_router:
+        print("Pre-loading Ollama model...")
+        try:
+            import threading
+            def warmup():
+                try:
+                    query_router.rag_system.generator.generate(
+                        query="warmup", docs=[], kb_context="", links=[], is_greeting=True
+                    )
+                    print("✓ Ollama model warmed up!")
+                except Exception as e:
+                    print(f"⚠ Warmup failed: {e}")
+            
+            threading.Thread(target=warmup, daemon=True).start()
+        except Exception as e:
+            print(f"⚠ Could not start warmup thread: {e}")
     
     elapsed = time.time() - start_time
     print(f"✓ Backend initialized in {elapsed:.4f} seconds")
@@ -155,6 +175,22 @@ def initialize_systems():
 # API ENDPOINTS
 # ============================================================
 
+def log_async(user_query, bot_response, time_taken, session_id, source, accuracy_label=None, context_snippets=None):
+    """Background task to log the response to the Production sheet."""
+    try:
+        if response_logger:
+            response_logger.log_response(
+                user_query=user_query,
+                bot_response=bot_response,
+                time_taken=time_taken,
+                session_id=session_id,
+                source=source,
+            )
+        print(f"✓ Background logging complete for session: {session_id}")
+    except Exception as e:
+        print(f"⚠ Background logging failed: {e}")
+
+
 @app.get("/")
 async def root():
     """Root endpoint - server health check"""
@@ -184,7 +220,7 @@ async def health_check():
 
 
 @app.post("/query")
-async def chat(request: QueryRequest):
+async def chat(request: QueryRequest, background_tasks: BackgroundTasks):
     """
     Main chat endpoint - accepts user queries and returns responses
     Supports streaming for RAG queries to improve perceived latency.
@@ -274,64 +310,20 @@ async def chat(request: QueryRequest):
                         # Format as Server-Sent Events
                         yield f"data: {json.dumps({'chunk': chunk})}\n\n"
                     
-                    # Send completion signal
-                    yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
-                    
-                    # Log the COMPLETE response after streaming finishes
+                    # Send completion signal with server-side time_taken
                     end_time = time.time()
-                    response_time = end_time - start_time
+                    response_time = round(end_time - start_time, 4)
+                    yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'time_taken': response_time})}\n\n"
                     
-                    # Calculate Metrics for Logging
-                    faithfulness = 1.0 # Default
-                    relevance = 0.5    # Default
-                    link_score = 1.0   # Default
-                    cross_val_score = 1.0
-                    cross_val_label = "OK"
-                    
-                    try:
-                        from sentence_transformers import util
-                        # 1. Faithfulness
-                        if context_snippets:
-                            ctx_str = " ".join(context_snippets)
-                            emb1 = query_router.rag_system.kb.kb_encoder.encode(full_response, convert_to_tensor=True)
-                            emb2 = query_router.rag_system.kb.kb_encoder.encode(ctx_str, convert_to_tensor=True)
-                            faithfulness = round(float(util.pytorch_cos_sim(emb1, emb2)), 4)
-                        
-                        # 2. Relevance
-                        emb_q = query_router.rag_system.kb.kb_encoder.encode(request.message, convert_to_tensor=True)
-                        emb_a = query_router.rag_system.kb.kb_encoder.encode(full_response, convert_to_tensor=True)
-                        relevance = round(float(util.pytorch_cos_sim(emb_q, emb_a)), 4)
-                        
-                        # 3. Cross-Validation
-                        if actual_source == "RAG" and any(kw in request.message.lower() for kw in ["list", "how many", "statistics"]):
-                            cross_val_label = "Review (Suggest SQL)"
-                            cross_val_score = 0.5
-                            
-                        # 4. Link Validity
-                        import re
-                        links = re.findall(r'\[.*?\]\((https?://.*?)\)', full_response)
-                        link_val_str = "N/A"
-                        if links:
-                            link_val_str = f"{len(links)}/{len(links)} (Auto)"
-                            link_score = 1.0
-                    except Exception as e:
-                        print(f"Metrics calculation error: {e}")
-
-                    accuracy = round((faithfulness * 0.3) + (relevance * 0.4) + (cross_val_score * 0.15) + (link_score * 0.15), 4)
-                    
+                    # Log the COMPLETE response after streaming finishes in background
                     if response_logger:
-                        response_logger.log_response(
-                            user_query=request.message,
-                            bot_response=full_response,
-                            time_taken=response_time,
-                            session_id=session_id,
-                            source=actual_source,
-                            confidence=str(confidence),
-                            faithfulness=faithfulness,
-                            relevance=relevance,
-                            cross_val=cross_val_label,
-                            link_val=link_val_str if 'link_val_str' in locals() else "N/A",
-                            accuracy=accuracy
+                        background_tasks.add_task(
+                            log_async,
+                            request.message,
+                            full_response,
+                            response_time,
+                            session_id,
+                            actual_source if "actual_source" in locals() else "RAG (Streamed)",
                         )
                 except Exception as e:
                     print(f"Streaming error: {e}")
@@ -392,48 +384,23 @@ async def chat(request: QueryRequest):
             end_time = time.time()
             response_time = end_time - start_time
             
-            # Calculate metrics for SQL/KB
-            try:
-                from sentence_transformers import util
-                emb_q = query_router.rag_system.kb.kb_encoder.encode(request.message, convert_to_tensor=True)
-                emb_a = query_router.rag_system.kb.kb_encoder.encode(str(answer), convert_to_tensor=True)
-                relevance = round(float(util.pytorch_cos_sim(emb_q, emb_a)), 4)
-                
-                # SQL/KB is generally faithful to itself
-                faithfulness = 1.0
-                cross_val_score = 1.0
-                cross_val_label = "OK"
-                link_score = 1.0
-                
-                # Cross-Val for SQL (if it was a general question)
-                if response_source == "SQL" and any(kw in request.message.lower() for kw in ["about", "how to"]):
-                    cross_val_label = "Review (Suggest RAG)"
-                    cross_val_score = 0.5
-                
-                accuracy = round((faithfulness * 0.3) + (relevance * 0.4) + (cross_val_score * 0.15) + (link_score * 0.15), 4)
-                
-                if response_logger:
-                    response_logger.log_response(
-                        user_query=request.message,
-                        bot_response=str(answer),
-                        time_taken=response_time,
-                        session_id=session_id,
-                        source=response_source,
-                        confidence=100 if response_accuracy == "High" else 50,
-                        faithfulness=faithfulness,
-                        relevance=relevance,
-                        cross_val=cross_val_label,
-                        link_val="N/A",
-                        accuracy=accuracy
-                    )
-            except Exception as log_err:
-                print(f"Logging failed: {log_err}")
-
             # Store bot response in history
             session_history[session_id].append({
                 "role": "bot",
                 "message": answer
             })
+            
+            # Offload heavy metrics and logging to background
+            if response_logger:
+                background_tasks.add_task(
+                    log_async,
+                    request.message,
+                    str(answer),
+                    response_time,
+                    session_id,
+                    response_source,
+                    response_accuracy
+                )
             
             # Keep session history manageable (last 50 exchanges)
             if len(session_history[session_id]) > 100:
@@ -443,7 +410,8 @@ async def chat(request: QueryRequest):
                 answer=str(answer),
                 session_id=session_id,
                 source=response_source,
-                confidence=100 if response_accuracy == "High" else 50 if response_accuracy == "N/A" else 0
+                confidence=100 if response_accuracy == "High" else 50 if response_accuracy == "N/A" else 0,
+                time_taken=round(response_time, 4)
             )
     
     except Exception as e:
