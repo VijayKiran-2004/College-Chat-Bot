@@ -19,9 +19,9 @@ if not GROQ_API_KEY:
 
 client = AsyncGroq(api_key=GROQ_API_KEY)
 
-INPUT_FILE = "tkrcet_links.txt"   # List of TKRCET URLs
-OUTPUT_DIR = "outputs"            # Folder for per-page JSON
-COMBINED_OUTPUT = "all_results.json"
+INPUT_FILE = "data/scraped_data/tkrcet_links.txt"   # List of TKRCET URLs
+OUTPUT_DIR = "data/scraped_data/outputs"            # Folder for per-page JSON
+COMBINED_OUTPUT = "data/scraped_data/all_results.json"
 
 # =============================================================
 # PLAYWRIGHT: Extract clean visible text

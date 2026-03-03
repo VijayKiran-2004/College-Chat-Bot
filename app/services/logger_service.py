@@ -1,84 +1,99 @@
 import os
+import threading
 from datetime import datetime
 from pathlib import Path
 from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
+
+PROD_SHEET     = "Production"
+PROD_COLUMNS   = [
+    "Timestamp", "User Query", "Bot Response", "Time Taken (s)",
+    "Session ID", "Source"
+]
 
 class ResponseLogger:
     def __init__(self, log_dir=None, filename="response_log.xlsx"):
-        """
-        Initialize the ResponseLogger.
-        
-        Args:
-            log_dir (str): Directory where the log file will be stored.
-            filename (str): Name of the Excel file.
-        """
-        if log_dir is None:
-            # Default to logs directory in project root
-            self.log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
-        else:
-            self.log_dir = Path(log_dir)
-            
+        """Initialize the ResponseLogger with thread safety (single multi-sheet file)."""
+        self.lock = threading.Lock()
+        self.log_dir  = Path(log_dir) if log_dir else Path(__file__).resolve().parent.parent.parent / "logs"
         self.log_file = self.log_dir / filename
         self._ensure_log_file()
 
-    def _ensure_log_file(self):
-        """Ensure the log directory and file exist with proper headers."""
-        if not self.log_dir.exists():
-            self.log_dir.mkdir(parents=True, exist_ok=True)
-            
-        columns = ["Timestamp", "User Query", "Bot Response", "Time Taken (s)", "Session ID", "Source", 
-                   "Retrieval Confidence (%)", "Faithfulness", "Answer Relevance", 
-                   "Cross-Validation (SQL vs. RAG)", "Link Validity", "Accuracy"]
-            
-        if not self.log_file.exists():
-            wb = Workbook()
-            ws = wb.active
-            ws.append(columns)
-            wb.save(self.log_file)
-        else:
-            # Check if columns need updating
-            try:
-                wb = load_workbook(self.log_file)
-                ws = wb.active
-                headers = [cell.value for cell in ws[1]]
-                
-                if "Faithfulness" not in headers:
-                    # Append new headers
-                    for col in columns:
-                        if col not in headers:
-                            ws.cell(row=1, column=len(headers)+1, value=col)
-                            headers.append(col)
-                    wb.save(self.log_file)
-            except Exception as e:
-                print(f"Error checking log file headers: {e}")
+    def _make_fresh_wb(self):
+        """Create a brand new workbook with both sheets pre-initialised."""
+        wb = Workbook()
+        # Production sheet (active by default)
+        ws_prod = wb.active
+        ws_prod.title = PROD_SHEET
+        ws_prod.append(PROD_COLUMNS)
+        for cell in ws_prod[1]:
+            cell.font = Font(bold=True)
 
-    def log_response(self, user_query, bot_response, time_taken, session_id="N/A", 
-                     source="N/A", confidence="N/A", faithfulness=1.0, relevance=1.0, 
-                     cross_val="OK", link_val="N/A", accuracy=1.0):
-        """
-        Log a query and response pair to the Excel file with 4-Pillar metrics.
-        """
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            
-            # Load existing workbook
-            if self.log_file.exists():
-                wb = load_workbook(self.log_file)
-                ws = wb.active
+        # Evaluation sheet (created but left empty — prompt_test.py fills it)
+        ws_eval = wb.create_sheet("Evaluation")
+        eval_cols = [
+            "Timestamp", "Prompt", "Bot Answer", "Source",
+            "Retrieval Confidence (%)", "Latency (s)", "Server Time (s)",
+            "Faithfulness % (LLM)", "Relevance % (LLM)", "Completeness % (LLM)",
+            "BERTScore F1 %", "Link Validity", "Accuracy %"
+        ]
+        ws_eval.append(eval_cols)
+        for cell in ws_eval[1]:
+            cell.font = Font(bold=True)
+        return wb
+
+    def _ensure_log_file(self):
+        """Ensure the log file exists with both sheets."""
+        with self.lock:
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+            if not self.log_file.exists():
+                wb = self._make_fresh_wb()
+                wb.save(self.log_file)
             else:
-                self._ensure_log_file()
-                wb = load_workbook(self.log_file)
-                ws = wb.active
-            
-            # Append new row
-            ws.append([
-                timestamp, user_query, bot_response, f"{time_taken:.4f}", session_id, source,
-                confidence, faithfulness, relevance, cross_val, link_val, accuracy
-            ])
-            
-            wb.save(self.log_file)
-            print(f"✓ Logged response to: {self.log_file}")
-        except PermissionError:
-            print(f"⚠ ERROR: Could not write to {self.log_file}. Is the file open in Excel?")
-        except Exception as e:
-            print(f"Error logging response: {e}")
+                # Validate: make sure Production sheet exists
+                try:
+                    wb = load_workbook(self.log_file)
+                    if PROD_SHEET not in wb.sheetnames:
+                        ws = wb.create_sheet(PROD_SHEET, 0)
+                        ws.append(PROD_COLUMNS)
+                        for cell in ws[1]:
+                            cell.font = Font(bold=True)
+                        wb.save(self.log_file)
+                except Exception as e:
+                    print(f"⚠ Log file corrupted ({e}). Resetting...")
+                    backup = self.log_file.with_suffix(f'.corrupt_{int(datetime.now().timestamp())}.xlsx')
+                    try:
+                        self.log_file.rename(backup)
+                    except Exception:
+                        pass
+                    self._make_fresh_wb().save(self.log_file)
+
+    def log_response(self, user_query, bot_response, time_taken,
+                     session_id="N/A", source="N/A"):
+        """Append a row to the Production sheet with thread-safe file access."""
+        with self.lock:
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                try:
+                    wb = load_workbook(self.log_file) if self.log_file.exists() else self._make_fresh_wb()
+                except Exception as e:
+                    print(f"⚠ Error loading log ({e}). Resetting...")
+                    wb = self._make_fresh_wb()
+
+                # Get or create Production sheet
+                if PROD_SHEET in wb.sheetnames:
+                    ws = wb[PROD_SHEET]
+                else:
+                    ws = wb.create_sheet(PROD_SHEET, 0)
+                    ws.append(PROD_COLUMNS)
+
+                ws.append([
+                    timestamp, user_query, bot_response,
+                    f"{time_taken:.4f}", session_id, source
+                ])
+                wb.save(self.log_file)
+                print(f"✓ Logged response to: {self.log_file} [Sheet: {PROD_SHEET}]")
+            except PermissionError:
+                print(f"⚠ ERROR: Could not write to {self.log_file}. Is it open in Excel?")
+            except Exception as e:
+                print(f"Error logging response: {e}")

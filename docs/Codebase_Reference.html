@@ -283,7 +283,8 @@
         <h1>📚 College Chat Bot</h1>
         <h2>Full Codebase Reference Document</h2>
         <p class="meta">Project: TKR College of Engineering &amp; Technology (TKRCET) AI Chatbot<br>
-            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Generated: February 2026 (v3.5 Update)</p>
+            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Updated: March 2026 (v3.6 &mdash; Logging &amp;
+            Evaluation Refinement)</p>
     </div>
 
     <div class="container">
@@ -651,12 +652,13 @@
         </div>
 
         <div class="file-card">
-            <span class="file-path">app/services/logger_service.py</span><span class="file-type">Python — Logging</span>
-            <h4>ResponseLogger — Conversation Log Writer</h4>
-            <p>Automatically records every interaction the chatbot has. After each response, it appends a row to an
-                Excel file with full details.</p>
+            <span class="file-path">app/services/logger_service.py</span><span class="file-type">Python &mdash;
+                Logging</span>
+            <h4>ResponseLogger &mdash; Dual-Sheet Conversation Log Writer</h4>
+            <p>Automatically records every interaction the chatbot has into <code>logs/response_log.xlsx</code>.
+                The file contains two separate sheets with different purposes:</p>
 
-            <h4 style="margin-top:14px;">Logged columns:</h4>
+            <h4 style="margin-top:14px;">Production Sheet &mdash; 6 columns (every live query)</h4>
             <table>
                 <tr>
                     <th>Column</th>
@@ -676,7 +678,7 @@
                 </tr>
                 <tr>
                     <td>Time Taken (s)</td>
-                    <td>How many seconds to generate the response</td>
+                    <td>Pure server-side processing time (does NOT include network)</td>
                 </tr>
                 <tr>
                     <td>Session ID</td>
@@ -684,15 +686,80 @@
                 </tr>
                 <tr>
                     <td>Source</td>
-                    <td>Where the answer came from (RAG/SQL/KB)</td>
-                </tr>
-                <tr>
-                    <td>Accuracy</td>
-                    <td>Confidence level (High / 100% / Medium / Timeout)</td>
+                    <td>Which system answered: RAG / SQL / KB</td>
                 </tr>
             </table>
-            <div class="generates"><strong>📤 Generates:</strong> <code>logs/response_log.xlsx</code> — grows with every
-                chat interaction.</div>
+
+            <h4 style="margin-top:14px;">Evaluation Sheet &mdash; 13 columns (populated by <code>prompt_test.py</code>)
+            </h4>
+            <table>
+                <tr>
+                    <th>Column</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>Timestamp</td>
+                    <td>When the test was run</td>
+                </tr>
+                <tr>
+                    <td>Prompt</td>
+                    <td>The test question</td>
+                </tr>
+                <tr>
+                    <td>Bot Answer</td>
+                    <td>Full response from the chatbot</td>
+                </tr>
+                <tr>
+                    <td>Source</td>
+                    <td>RAG / SQL / KB</td>
+                </tr>
+                <tr>
+                    <td>Retrieval Confidence (%)</td>
+                    <td>Cosine similarity of query vs top retrieved chunk &times; 100</td>
+                </tr>
+                <tr>
+                    <td>Latency (s)</td>
+                    <td>Client-side round-trip time (server + network)</td>
+                </tr>
+                <tr>
+                    <td>Server Time (s)</td>
+                    <td>Server-side processing time echoed inside the API response</td>
+                </tr>
+                <tr>
+                    <td>Faithfulness % (LLM)</td>
+                    <td>Are all claims grounded in the retrieved context? (LLM judge, weight 30%)</td>
+                </tr>
+                <tr>
+                    <td>Relevance % (LLM)</td>
+                    <td>Does the answer address the question? (LLM judge, weight 25%)</td>
+                </tr>
+                <tr>
+                    <td>Completeness % (LLM)</td>
+                    <td>Are all aspects of the question covered? (LLM judge, weight 20%)</td>
+                </tr>
+                <tr>
+                    <td>BERTScore F1 %</td>
+                    <td>Semantic sentence-level overlap: answer vs context (weight 15%)</td>
+                </tr>
+                <tr>
+                    <td>Link Validity</td>
+                    <td>How many hyperlinks in the answer are live (e.g., 3/4 Valid)</td>
+                </tr>
+                <tr>
+                    <td>Accuracy %</td>
+                    <td>Weighted final score across all metrics</td>
+                </tr>
+            </table>
+            <div class="generates"><strong>📤 Generates:</strong> <code>logs/response_log.xlsx</code> with two sheets:
+                <ul>
+                    <li><strong>Production</strong> &mdash; grows with every live chat interaction</li>
+                    <li><strong>Evaluation</strong> &mdash; populated by <code>prompt_test.py</code> with full metric
+                        scores</li>
+                </ul>
+            </div>
+            <div class="note">💡 Run <code>python tools/refresh_logs.py</code> to archive the current log and start
+                fresh.
+                Check <code>logs/Metrics_Reference.pdf</code> for a full explanation of every metric.</div>
         </div>
 
         <!-- prompt_construction.py has been REMOVED — it was unused in production code -->
@@ -1050,9 +1117,51 @@
 
 
         <!-- ===== SECTION 12A: TOOLS ===== -->
-        <h2 class="section-title" id="tools">12. Tools Directory (Log Analysis &amp; Maintenance)</h2>
-        <p style="margin-bottom:18px;color:#555;">These files live in <code>tools/</code> and contain utilities for log
-            analysis and maintenance.</p>
+        <h2 class="section-title" id="tools">12. Tools &mdash; Log Analysis &amp; Maintenance</h2>
+        <p style="margin-bottom:18px;color:#555;">These scripts live in <code>tools/</code> and are used for log
+            management, inspection, and evaluation documentation. They are NOT part of the live server.</p>
+
+        <div class="file-card">
+            <span class="file-path">tools/refresh_logs.py</span><span class="file-type">Python &mdash; Log Reset</span>
+            <h4>Log Archiver &amp; Reset Tool</h4>
+            <p>Archives the current <code>logs/response_log.xlsx</code> with a dated filename (e.g.,
+                <code>response_log_20260303_0142.xlsx</code>) then creates a fresh empty log with the correct column
+                headers for both sheets.
+            </p>
+            <div class="generates"><strong>📤 Generates:</strong> A fresh <code>logs/response_log.xlsx</code> with empty
+                Production (6 cols) and Evaluation (13 cols) sheets.</div>
+            <div class="note">💡 Run this whenever you want a clean slate before a new evaluation run:
+                <code>python tools/refresh_logs.py</code>
+            </div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">tools/generate_metrics_pdf.py</span><span class="file-type">Python &mdash; PDF
+                Generator</span>
+            <h4>Metrics Reference PDF Generator</h4>
+            <p>Generates <code>logs/Metrics_Reference.pdf</code> — a professionally designed multi-section reference
+                guide that documents every evaluation metric with its formula, plain-English explanation, worked
+                example, and color-coded score interpretation table.</p>
+            <ul>
+                <li>Section 1: Timing Metrics (Time Taken, Latency, Server Time)</li>
+                <li>Section 2: Retrieval Quality (Retrieval Confidence, Source)</li>
+                <li>Section 3: LLM-as-Judge (Faithfulness, Relevance, Completeness)</li>
+                <li>Section 4: Statistical (BERTScore F1, Link Validity)</li>
+                <li>Section 5: Final Accuracy (weighted mean Σ wᵢ·xᵢ)</li>
+            </ul>
+            <div class="generates"><strong>📤 Generates:</strong> <code>logs/Metrics_Reference.pdf</code> (~37 KB).
+                Requires <code>reportlab</code>: <code>pip install reportlab</code> inside <code>.venv</code>.</div>
+            <div class="note">💡 Run: <code>.venv\Scripts\python.exe tools\generate_metrics_pdf.py</code></div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">inspect_logs.py</span><span class="file-type">Python &mdash; Log Viewer</span>
+            <h4>Log Inspector — Terminal Sheet Viewer</h4>
+            <p>Reads <code>logs/response_log.xlsx</code> and pretty-prints the contents of both the Production and
+                Evaluation sheets to the terminal. Useful for a quick spot-check without opening Excel.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Terminal output only — no files modified.</div>
+            <div class="note">💡 Run: <code>python inspect_logs.py</code></div>
+        </div>
 
         <div class="file-card">
             <span class="file-path">tools/analyze_logs.py</span><span class="file-type">Python — Analytics</span>
@@ -1084,15 +1193,6 @@
         <p style="margin-bottom:18px;color:#555;">Test files live in <code>tests/</code> and can be run from the project
             root.</p>
 
-        <div class="file-card">
-            <span class="file-path">terminal_chat.py</span><span class="file-type">Python — CLI Interface</span>
-            <h4>Terminal-Based Chatbot Interface</h4>
-            <p>A command-line version of the chatbot. Instead of using the web browser, you type questions directly in
-                the terminal and get answers. Useful for testing without starting the full web server.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Printed responses in the terminal. Run:
-                <code>python terminal_chat.py</code>
-            </div>
-        </div>
 
         <div class="file-card">
             <span class="file-path">verify_codebase.py</span><span class="file-type">Python — Validation</span>

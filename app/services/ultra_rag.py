@@ -20,6 +20,7 @@ from app.services.knowledge_base import KnowledgeBase
 from app.services.link_manager import LinkManager
 from app.services.retriever import Retriever
 from app.services.generator import Generator
+from app.services.embedding_service import get_embedding_model
 
 class UltraRAGSystem:
     """
@@ -38,14 +39,13 @@ class UltraRAGSystem:
         self.ollama_url = ollama_url or os.environ.get('OLLAMA_URL', 'http://127.0.0.1:11434/api/generate')
         
         self.project_root = Path(__file__).resolve().parent.parent.parent
-        self.corpus_path = corpus_path or str(self.project_root / 'app/database/vectordb/corpus_ultrarag.jsonl')
+        self.corpus_path = corpus_path or str(self.project_root / 'data/chunks/corpus_ultrarag.jsonl')
         self.kb_path = str(self.project_root / 'data/knowledge_base.json')
         
         # Initialize sub-components
         if semantic_model is None:
-            from sentence_transformers import SentenceTransformer
-            print("Loading local SentenceTransformer model...")
-            semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+            print("Fetching shared embedding model...")
+            semantic_model = get_embedding_model('all-MiniLM-L6-v2')
             
         self.kb = KnowledgeBase(self.kb_path, semantic_model)
         self.kb.load_sql_stats()
@@ -59,49 +59,58 @@ class UltraRAGSystem:
         
         print("✓ UltraRAGSystem ready!\n")
 
-    def _stream_call(self, query, language='en', temperature=0.2):
+    def _stream_call(self, query, is_greeting=False, language='en', temperature=0.2):
         """Streaming generator entry point for queries"""
         if not query:
             yield "Please enter a question."
             return
             
-        # Greetings (Flexible Regex Matching)
-        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]*$"
-        if re.match(greetings_pattern, query.lower()):
-            greeting_response = "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today!"
-            yield {"type": "metadata", "source": "Greeting"}
-            yield greeting_response
+        if is_greeting:
+            # Skip retrieval for greetings
+            yield {"type": "metadata", "source": "Greeting Fast-track", "confidence": 100}
+            for chunk in self.generator.generate(
+                query=query,
+                docs=[],
+                kb_context="",
+                kb_fact=None,
+                links=[],
+                language=language,
+                stream=True,
+                temperature=temperature,
+                is_greeting=True
+            ):
+                yield chunk
             return
-            
-        # Check Knowledge Base
-        kb_answer = self.kb.check(query)
-        if kb_answer:
-            topic_links = self.link_manager.get_topic_links(query)
-            if topic_links:
-                kb_answer += "\n\n📌 **Quick Links:**\n" + "".join([f"• [{tl['title']}]({tl['url']})\n" for tl in topic_links])
-            yield {"type": "metadata", "source": "Knowledge Base"}
-            yield kb_answer
-            return
+
+        # Check Knowledge Base for raw facts
+        kb_fact = self.kb.check(query)
+        metadata = {"type": "metadata", "source": "RAG"}
+        if kb_fact:
+            metadata["source"] = "Knowledge Base"
             
         # Retrieve Documents
-        docs = self.retriever.retrieve(query, top_k=3)
+        docs = self.retriever.retrieve(query, top_k=2)
         
         confidence = 0
         if docs:
             avg_score = sum(d.get('relevance_score', 0) for d in docs) / len(docs)
             confidence = max(0, min(100, int(avg_score * 100)))
+            metadata["confidence"] = confidence
             
         context_snippets = [d.get("contents", "") for d in docs[:3]]
-        yield {"type": "metadata", "source": "RAG", "confidence": confidence, "context": context_snippets}
+        metadata["context"] = context_snippets
+        
+        yield metadata
         
         links = self.link_manager.extract_relevant_links(docs, query)
         kb_context = self.kb.format_context()
         
-        # Stream Generation
+        # Stream Generation (Integrating KB Fact as a primary source if found)
         for chunk in self.generator.generate(
             query=query, 
             docs=docs, 
             kb_context=kb_context, 
+            kb_fact=kb_fact,
             links=links, 
             language=language, 
             stream=True, 
@@ -109,43 +118,45 @@ class UltraRAGSystem:
         ):
             yield chunk
 
-    def __call__(self, query, language='en', stream=False, return_dict=False, temperature=0.2):
+    def __call__(self, query, is_greeting=False, language='en', stream=False, return_dict=False, temperature=0.2):
         """Main entry point for queries"""
         query = query.strip()
         
         if stream:
-            return self._stream_call(query, language, temperature)
+            return self._stream_call(query, is_greeting, language, temperature)
             
         if not query:
             return {"response": "Please enter a question.", "source": "System"} if return_dict else "Please enter a question."
             
-        # Greetings
-        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]*$"
-        if re.match(greetings_pattern, query.lower()):
-            greeting_response = "Hello! I'm your TKRCET College Buddy! 😊 How can I help you today!"
-            return {"response": greeting_response, "source": "Greeting"} if return_dict else greeting_response
-            
+        if is_greeting:
+            # Fast-track for greetings
+            response = self.generator.generate(
+                query=query,
+                docs=[],
+                kb_context="",
+                kb_fact=None,
+                links=[],
+                language=language,
+                stream=False,
+                temperature=temperature,
+                is_greeting=True
+            )
+            if return_dict:
+                return {"response": response, "source": "Greeting Fast-track", "confidence": 100}
+            return response
+
         # Check Cache
         query_key = query.lower().strip()
         if query_key in self.response_cache:
             print("  [Cache Hit] Returning cached response")
             return {"response": self.response_cache[query_key], "source": "Cache"} if return_dict else self.response_cache[query_key]
             
-        # Check Knowledge Base
-        kb_answer = self.kb.check(query)
-        if kb_answer:
-            topic_links = self.link_manager.get_topic_links(query)
-            if topic_links:
-                kb_answer += "\n\n📌 **Quick Links:**\n" + "".join([f"• [{tl['title']}]({tl['url']})\n" for tl in topic_links])
-            
-            self.response_cache[query_key] = kb_answer
-            if len(self.response_cache) > 50:
-                self.response_cache.pop(next(iter(self.response_cache)))
-            
-            return {"response": kb_answer, "source": "Knowledge Base"} if return_dict else kb_answer
+        # Check Knowledge Base for raw facts
+        kb_fact = self.kb.check(query)
+        source = "Knowledge Base" if kb_fact else "RAG"
             
         # Retrieve Documents
-        docs = self.retriever.retrieve(query, top_k=3)
+        docs = self.retriever.retrieve(query, top_k=2)
         
         confidence = 0
         if docs:
@@ -160,28 +171,20 @@ class UltraRAGSystem:
             query=query, 
             docs=docs, 
             kb_context=kb_context, 
+            kb_fact=kb_fact,
             links=links, 
             language=language, 
             stream=False, 
             temperature=temperature
         )
         
+        # Cache factual responses
+        self.response_cache[query_key] = response
+        if len(self.response_cache) > 50:
+            self.response_cache.pop(next(iter(self.response_cache)))
+
         if return_dict:
-            return {"response": response, "source": "RAG", "confidence": confidence}
+            return {"response": response, "source": source, "confidence": confidence}
         return response
 
-if __name__ == '__main__':
-    print("\n" + "=" * 70)
-    print("ULTRARAG SYSTEM TEST")
-    print("=" * 70 + "\n")
-    
-    rag = UltraRAGSystem()
-    test_queries = [
-        "hi",
-        "who is the principal?",
-        "what are the facilities?",
-        "college timings?",
-    ]
-    for query in test_queries:
-        print(f"Q: {query}")
-        print(f"A: {rag(query)}\n")
+

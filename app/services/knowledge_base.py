@@ -106,43 +106,8 @@ class KnowledgeBase:
         self.kb_embeddings = self.kb_encoder.encode(search_texts, show_progress_bar=False)
         self.kb_embeddings = np.array(self.kb_embeddings)
 
-    def _random_response(self, value, key_type, extra_info=None):
-        import random
-        templates = {
-            "principal": [
-                f"The Principal of TKRCET is **{value}**.",
-                f"Dr. **{value}** is our respected Principal.",
-                f"That would be **{value}**!",
-                f"Currently, **{value}** serves as the Principal."
-            ],
-            "vice_principal": [
-                f"The Vice Principal is **{value}**.",
-                f"**{value}** is the Vice Principal of our college."
-            ],
-            "secretary": [
-                f"The Secretary is **{value}**.",
-                f"**{value}** holds the position of Secretary."
-            ],
-            "chairman": [
-                f"The Chairman is **{value}**.",
-                f"Our Chairman is **{value}**."
-            ],
-            "dean": [
-                f"The Dean of Academics is **{value}**.",
-                f"**{value}** is the Dean of Academics."
-            ],
-            "hod": [
-                f"The HOD of **{extra_info}** is **{value}**.",
-                f"**{value}** heads the **{extra_info}** department.",
-                f"For **{extra_info}**, the HOD is **{value}**."
-            ]
-        }
-        if key_type in templates:
-            return random.choice(templates[key_type])
-        return value
-
     def check(self, query):
-        """KB matching with keyword fallback + semantic matching"""
+        """KB matching with keyword fallback + semantic matching. Returns raw fact or None."""
         from sklearn.metrics.pairwise import cosine_similarity
         
         if len(self.kb_entries) == 0:
@@ -154,18 +119,18 @@ class KnowledgeBase:
             print(f"  ⚡ [Fast Track] Keywords found in: '{query}'")
 
         if 'principal' in query_lower and 'vice' not in query_lower:
-            return self._random_response(self.data['personnel']['principal'], "principal")
+            return f"Principal: {self.data['personnel']['principal']}"
 
         if 'vice principal' in query_lower:
-            return self._random_response(self.data['personnel']['vice_principal'], "vice_principal")
+            return f"Vice Principal: {self.data['personnel']['vice_principal']}"
 
         if 'secretary' in query_lower:
-            return self._random_response(self.data['personnel']['secretary'], "secretary")
+            return f"Secretary: {self.data['personnel']['secretary']}"
         if 'chairman' in query_lower:
-            return self._random_response(self.data['society']['chairman'], "chairman")
+            return f"Chairman: {self.data['society']['chairman']}"
 
         if 'dean' in query_lower and 'academic' in query_lower:
-             return self._random_response(self.data['personnel']['dean_academics'], "dean")
+             return f"Dean Academics: {self.data['personnel']['dean_academics']}"
 
         if 'hod' in query_lower:
             deps = {
@@ -182,7 +147,7 @@ class KnowledgeBase:
                          hod_name = self.data['personnel']['hod'].get(key)
                     
                     if hod_name:
-                        return self._random_response(hod_name, "hod", label)
+                        return f"HOD of {label}: {hod_name}"
                         found_dept = True
                         break
             
@@ -237,38 +202,38 @@ class KnowledgeBase:
         
         if category == 'personnel':
             if key == 'principal':
-                return f"The Principal of TKRCET is {value}."
+                return f"Principal: {value}"
             elif key == 'vice_principal':
-                return f"The Vice Principal is {value}."
+                return f"Vice Principal: {value}"
             elif key == 'secretary':
-                return f"The Secretary of TKRCET is {value}."
+                return f"Secretary: {value}"
             elif key == 'chairman':
-                return f"The Chairman of TKRCET is {value}."
+                return f"Chairman: {value}"
             elif key == 'dean_academics':
-                return f"The Dean of Academics is {value}."
+                return f"Dean Academics: {value}"
             elif 'hod' in key:
                 dept = key.split('.')[-1] if '.' in key else key
-                return f"The HOD of {dept.upper()} is {value}."
+                return f"HOD of {dept.upper()}: {value}"
             else:
                 return value
         
         elif category == 'timings':
             if key == 'working_hours':
                 lunch = self.data['timings'].get('lunch_break', '')
-                return f"College timings: {value}. Lunch break: {lunch}."
+                return f"Working Hours: {value}. Lunch Break: {lunch}."
             else:
                 return value
         
         elif category == 'history' or key in ['location', 'established', 'affiliation', 'status', 'campus_size']:
             h = self.data['history']
             if key == 'location' or 'address' in query.lower() or 'where' in query.lower():
-                return f"**TKRCET Location:**\n\n📍 {h['location']}\n\n**Established:** {h['established']}\n**Affiliation:** {h['affiliation']}\n**Status:** {h['status']}\n**Campus Size:** {h['campus_size']}"
+                return f"Location: {h['location']}. Established: {h['established']}. Affiliation: {h['affiliation']}. Status: {h['status']}. Campus Size: {h['campus_size']}"
             elif key == 'established':
-                return f"TKRCET was established in **{value}**."
+                return f"Established: {value}"
             elif key == 'affiliation':
-                return f"TKRCET is affiliated to **{value}**."
+                return f"Affiliation: {value}"
             elif key == 'status':
-                return f"TKRCET has **{value}** status."
+                return f"Status: {value}"
             else:
                 return value
         
@@ -300,7 +265,7 @@ class KnowledgeBase:
         elif category == 'courses':
             ug = ', '.join(self.data['courses']['ug'])
             pg = ', '.join(self.data['courses']['pg'])
-            return f"TKRCET offers {self.data['courses']['total']}.\n\nUG Programs: {ug}\n\nPG Programs: {pg}"
+            return f"UG Programs: {ug}. PG Programs: {pg}."
         
         elif category == 'fees' or 'fee' in key:
             f = self.data['fees']
