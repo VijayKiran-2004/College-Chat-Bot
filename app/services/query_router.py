@@ -11,10 +11,15 @@ class QueryRouter:
         """Initialize query router with all systems"""
         print("Initializing Query Router...")
         
-        self.intent_detector = IntentDetector()
+        from sentence_transformers import SentenceTransformer
+        print("Loading shared SentenceTransformer model...")
+        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        print("✓ Shared semantic model loaded")
+        
+        self.intent_detector = IntentDetector(semantic_model=self.semantic_model)
         print("✓ Intent Detector loaded")
         
-        self.rag_system = UltraRAGSystem()  # Using new UltraRAG system
+        self.rag_system = UltraRAGSystem(semantic_model=self.semantic_model)  # Using new UltraRAG system
         print("✓ UltraRAG System loaded")
         
         self.sql_system = SQLSystem()
@@ -41,7 +46,7 @@ class QueryRouter:
             dict: {
                 "response": str,
                 "source": str,
-                "accuracy": str
+                "accuracy": str  # Real confidence score
             }
         """
         # Detect intent
@@ -66,14 +71,16 @@ class QueryRouter:
             if isinstance(result, dict):
                  response = result.get('response')
                  source = result.get('source', 'RAG/Knowledge Base')
+                 confidence = result.get('confidence', 0)
             else:
                  response = result
                  source = "RAG/Knowledge Base"
+                 confidence = 0
             
             return {
                 "response": response,
                 "source": source,
-                "accuracy": "High" # Placeholder, ideally comes from RAG system
+                "accuracy": f"{confidence}%"
             }
         
         elif intent == 'student':
@@ -82,7 +89,7 @@ class QueryRouter:
             return {
                 "response": response,
                 "source": "SQL Database",
-                "accuracy": "100%" # SQL is deterministic
+                "accuracy": "100%"  # SQL is deterministic
             }
         
         elif intent == 'hybrid':
@@ -92,7 +99,7 @@ class QueryRouter:
             return {
                 "response": response,
                 "source": "Deep Reasoning Agent",
-                "accuracy": "High"
+                "accuracy": "N/A"  # Agent uses multiple sources
             }
         
         else:
@@ -102,8 +109,9 @@ class QueryRouter:
             return {
                 "response": response,
                 "source": "Deep Reasoning Agent (Fallback)",
-                "accuracy": "Medium"
+                "accuracy": "N/A"
             }
+
     
     def __call__(self, query, chat_history=None):
         """Make class callable"""

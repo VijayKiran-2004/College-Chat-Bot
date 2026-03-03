@@ -1,0 +1,47 @@
+﻿Columns: ['Timestamp', 'User Query', 'Bot Response', 'Time Taken (s)', 'Session ID', 'Source', 'Accuracy']
+
+=== Entry 6 ===
+  Timestamp: 2026-02-22 00:32:34
+  User Query: how can i apply for the passport?
+  Bot Response: To apply for a passport, you'll need to submit an application to the Passport Authority in your country. Here are the general steps:
+
+1. **Gather requ...
+  Time Taken (s): 25.9642
+  Session ID: fad6b36f-2e14-4ec0-830b-77bb9589e0fd
+  Source: RAG
+  Accuracy: High
+
+=== Entry 7 ===
+  Timestamp: 2026-02-22 00:44:55
+  User Query: hi
+.\.venv\Scripts\python.exe : 
+Traceback (most recent call 
+last):
+At line:1 char:1
++ .\.venv\Scripts\python.exe 
+read_recent_logs.py 2>&1 | 
+Out-File -Encod ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          :  
+   NotSpecified: (Traceback (  
+  most recent call last)::St   
+ ring) [], RemoteException
+    + FullyQualifiedErrorId :  
+   NativeCommandError
+ 
+  File "C:\ACP 
+project\read_recent_logs.py", 
+line 16, in <module>
+    print(f"  {col}: {val}")
+  File "C:\Users\vijay\AppData\
+Local\Programs\Python\Python310
+\lib\encodings\cp1252.py", 
+line 19, in encode
+    return codecs.charmap_encod
+e(input,self.errors,encoding_ta
+ble)[0]
+UnicodeEncodeError: 'charmap' 
+codec can't encode character 
+'\U0001f60a' in position 54: 
+character maps to <undefined>

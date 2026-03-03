@@ -26,7 +26,9 @@ class ResponseLogger:
         if not self.log_dir.exists():
             self.log_dir.mkdir(parents=True, exist_ok=True)
             
-        columns = ["Timestamp", "User Query", "Bot Response", "Time Taken (s)", "Session ID", "Source", "Accuracy"]
+        columns = ["Timestamp", "User Query", "Bot Response", "Time Taken (s)", "Session ID", "Source", 
+                   "Retrieval Confidence (%)", "Faithfulness", "Answer Relevance", 
+                   "Cross-Validation (SQL vs. RAG)", "Link Validity", "Accuracy"]
             
         if not self.log_file.exists():
             wb = Workbook()
@@ -40,24 +42,21 @@ class ResponseLogger:
                 ws = wb.active
                 headers = [cell.value for cell in ws[1]]
                 
-                if "Source" not in headers:
-                    ws.cell(row=1, column=len(headers)+1, value="Source")
-                    ws.cell(row=1, column=len(headers)+2, value="Accuracy")
+                if "Faithfulness" not in headers:
+                    # Append new headers
+                    for col in columns:
+                        if col not in headers:
+                            ws.cell(row=1, column=len(headers)+1, value=col)
+                            headers.append(col)
                     wb.save(self.log_file)
             except Exception as e:
                 print(f"Error checking log file headers: {e}")
 
-    def log_response(self, user_query, bot_response, time_taken, session_id="N/A", source="N/A", accuracy="N/A"):
+    def log_response(self, user_query, bot_response, time_taken, session_id="N/A", 
+                     source="N/A", confidence="N/A", faithfulness=1.0, relevance=1.0, 
+                     cross_val="OK", link_val="N/A", accuracy=1.0):
         """
-        Log a query and response pair to the Excel file.
-        
-        Args:
-            user_query (str): The user's input message.
-            bot_response (str): The bot's generated response.
-            time_taken (float): Time taken to generate the response in seconds.
-            session_id (str): The session identifier.
-            source (str): Source of the answer (RAG/SQL/KB).
-            accuracy (str): Confidence score or accuracy metric.
+        Log a query and response pair to the Excel file with 4-Pillar metrics.
         """
         try:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -72,7 +71,10 @@ class ResponseLogger:
                 ws = wb.active
             
             # Append new row
-            ws.append([timestamp, user_query, bot_response, f"{time_taken:.4f}", session_id, source, accuracy])
+            ws.append([
+                timestamp, user_query, bot_response, f"{time_taken:.4f}", session_id, source,
+                confidence, faithfulness, relevance, cross_val, link_val, accuracy
+            ])
             
             wb.save(self.log_file)
             print(f"✓ Logged response to: {self.log_file}")

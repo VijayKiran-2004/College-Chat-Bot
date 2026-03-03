@@ -36,13 +36,11 @@ We added a diagnostic tool to check your environment automatically.
 **Error:** `pip` gives errors about conflicting versions (e.g., numpy, torch).
 
 **Fix:**
-We updated `requirements.txt` to be more flexible. 
-1. Delete your virtual environment (optional but recommended):
+The unpinned dependencies (`langchain-experimental`, `langchain-huggingface`, `scikit-learn`, `transformers`) must have version pins compatible with `langchain==0.2.16`.
+1. Make sure your `requirements.txt` has pinned versions (not bare package names) on lines 41-44
+2. Delete your virtual environment and recreate:
    ```powershell
    Remove-Item -Recurse -Force .venv
-   ```
-2. Re-create and install:
-   ```powershell
    python -m venv .venv
    .\.venv\Scripts\Activate
    pip install -r requirements.txt
@@ -70,12 +68,10 @@ We updated `requirements.txt` to be more flexible.
 
 **Fix:**
 Your teammate might not have the specific model installed.
-*   Run: `ollama pull llama3.2:3b`
-*   **OR** use a different model by setting an Environment Variable:
+*   Run:
     ```powershell
-    # Windows PowerShell
-    $env:OLLAMA_MODEL="llama3.2"
-    python backend.py
+    ollama pull llama3.2:3b
+    ollama pull gemma3:1b
     ```
 
 ---

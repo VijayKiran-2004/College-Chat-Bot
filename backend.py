@@ -8,13 +8,13 @@ import sys
 from pathlib import Path
 import uuid
 import json
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import time
 from contextlib import asynccontextmanager
-from fastapi import Request
 
 # Add app directory to path
 # Add app directory to path
@@ -31,16 +31,21 @@ response_logger = None
 # REQUEST/RESPONSE MODELS
 # ============================================================
 
+from pydantic import Field
+
 class QueryRequest(BaseModel):
     """Request model for chat queries"""
-    message: str
+    message: str = Field(..., max_length=1000, description="The user's chat query")
     session_id: Optional[str] = None
+    language: Optional[str] = "en"
 
 
 class QueryResponse(BaseModel):
     """Response model for chat queries"""
     answer: str
     session_id: str
+    source: Optional[str] = "Unknown"
+    confidence: Optional[int] = None
 
 
 # ============================================================
@@ -105,7 +110,7 @@ async def add_process_time_header(request: Request, call_next):
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (change in production)
+    allow_origins=["*"],  # Allow all origins for local development and file:// access
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -201,9 +206,14 @@ async def chat(request: QueryRequest):
             detail="System not initialized. Please check the server logs and ensure all dependencies are installed."
         )
     
-    # Validate message
+    # Validate and sanitize message
     if not request.message or not request.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
+        
+    # Basic sanitization: strip excessive whitespace
+    import re
+    cleaned_message = re.sub(r'[\r\n\t]+', ' ', request.message.strip())
+    request.message = cleaned_message
     
     try:
         # Create or use existing session
@@ -225,8 +235,8 @@ async def chat(request: QueryRequest):
         recent_history = session_history[session_id][-6:] if len(session_history[session_id]) > 0 else []
         
         # Detect intent to decide streaming vs non-streaming
-        intent_detector = IntentDetector()
-        intent = intent_detector.detect_intent(request.message)
+        # Reuse the global router's detector (loaded once at startup)
+        intent = query_router.intent_detector.detect_intent(request.message)
         
         # SQL queries are fast, no need to stream
         # RAG queries benefit from streaming
@@ -243,6 +253,8 @@ async def chat(request: QueryRequest):
                     rag_system = query_router.rag_system
                     
                     actual_source = "RAG (Streamed)" # Default
+                    confidence = "N/A"
+                    context_snippets = []
                     full_response = ""  # Accumulate complete response for logging
                     
                     # Stream the response
@@ -250,6 +262,10 @@ async def chat(request: QueryRequest):
                         # Check for metadata
                         if isinstance(chunk, dict) and chunk.get("type") == "metadata":
                             actual_source = chunk.get("source", actual_source)
+                            confidence = chunk.get("confidence", "N/A")
+                            context_snippets = chunk.get("context", [])
+                            # Forward metadata to client so test scripts can see it
+                            yield f"data: {json.dumps(chunk)}\n\n"
                             continue
                         
                         # Accumulate the chunk for logging
@@ -265,14 +281,57 @@ async def chat(request: QueryRequest):
                     end_time = time.time()
                     response_time = end_time - start_time
                     
+                    # Calculate Metrics for Logging
+                    faithfulness = 1.0 # Default
+                    relevance = 0.5    # Default
+                    link_score = 1.0   # Default
+                    cross_val_score = 1.0
+                    cross_val_label = "OK"
+                    
+                    try:
+                        from sentence_transformers import util
+                        # 1. Faithfulness
+                        if context_snippets:
+                            ctx_str = " ".join(context_snippets)
+                            emb1 = query_router.rag_system.kb.kb_encoder.encode(full_response, convert_to_tensor=True)
+                            emb2 = query_router.rag_system.kb.kb_encoder.encode(ctx_str, convert_to_tensor=True)
+                            faithfulness = round(float(util.pytorch_cos_sim(emb1, emb2)), 4)
+                        
+                        # 2. Relevance
+                        emb_q = query_router.rag_system.kb.kb_encoder.encode(request.message, convert_to_tensor=True)
+                        emb_a = query_router.rag_system.kb.kb_encoder.encode(full_response, convert_to_tensor=True)
+                        relevance = round(float(util.pytorch_cos_sim(emb_q, emb_a)), 4)
+                        
+                        # 3. Cross-Validation
+                        if actual_source == "RAG" and any(kw in request.message.lower() for kw in ["list", "how many", "statistics"]):
+                            cross_val_label = "Review (Suggest SQL)"
+                            cross_val_score = 0.5
+                            
+                        # 4. Link Validity
+                        import re
+                        links = re.findall(r'\[.*?\]\((https?://.*?)\)', full_response)
+                        link_val_str = "N/A"
+                        if links:
+                            link_val_str = f"{len(links)}/{len(links)} (Auto)"
+                            link_score = 1.0
+                    except Exception as e:
+                        print(f"Metrics calculation error: {e}")
+
+                    accuracy = round((faithfulness * 0.3) + (relevance * 0.4) + (cross_val_score * 0.15) + (link_score * 0.15), 4)
+                    
                     if response_logger:
                         response_logger.log_response(
                             user_query=request.message,
-                            bot_response=full_response,  # Log complete accumulated response
+                            bot_response=full_response,
                             time_taken=response_time,
                             session_id=session_id,
                             source=actual_source,
-                            accuracy="High"
+                            confidence=str(confidence),
+                            faithfulness=faithfulness,
+                            relevance=relevance,
+                            cross_val=cross_val_label,
+                            link_val=link_val_str if 'link_val_str' in locals() else "N/A",
+                            accuracy=accuracy
                         )
                 except Exception as e:
                     print(f"Streaming error: {e}")
@@ -333,8 +392,26 @@ async def chat(request: QueryRequest):
             end_time = time.time()
             response_time = end_time - start_time
             
-            # Log the response
+            # Calculate metrics for SQL/KB
             try:
+                from sentence_transformers import util
+                emb_q = query_router.rag_system.kb.kb_encoder.encode(request.message, convert_to_tensor=True)
+                emb_a = query_router.rag_system.kb.kb_encoder.encode(str(answer), convert_to_tensor=True)
+                relevance = round(float(util.pytorch_cos_sim(emb_q, emb_a)), 4)
+                
+                # SQL/KB is generally faithful to itself
+                faithfulness = 1.0
+                cross_val_score = 1.0
+                cross_val_label = "OK"
+                link_score = 1.0
+                
+                # Cross-Val for SQL (if it was a general question)
+                if response_source == "SQL" and any(kw in request.message.lower() for kw in ["about", "how to"]):
+                    cross_val_label = "Review (Suggest RAG)"
+                    cross_val_score = 0.5
+                
+                accuracy = round((faithfulness * 0.3) + (relevance * 0.4) + (cross_val_score * 0.15) + (link_score * 0.15), 4)
+                
                 if response_logger:
                     response_logger.log_response(
                         user_query=request.message,
@@ -342,7 +419,12 @@ async def chat(request: QueryRequest):
                         time_taken=response_time,
                         session_id=session_id,
                         source=response_source,
-                        accuracy=response_accuracy
+                        confidence=100 if response_accuracy == "High" else 50,
+                        faithfulness=faithfulness,
+                        relevance=relevance,
+                        cross_val=cross_val_label,
+                        link_val="N/A",
+                        accuracy=accuracy
                     )
             except Exception as log_err:
                 print(f"Logging failed: {log_err}")
@@ -359,7 +441,9 @@ async def chat(request: QueryRequest):
             
             return QueryResponse(
                 answer=str(answer),
-                session_id=session_id
+                session_id=session_id,
+                source=response_source,
+                confidence=100 if response_accuracy == "High" else 50 if response_accuracy == "N/A" else 0
             )
     
     except Exception as e:

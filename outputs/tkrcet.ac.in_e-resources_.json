@@ -1,0 +1,76 @@
+{
+  "sections": [
+    {
+      "title": "# E-Resources",
+      "content": [
+        "- Home",
+        "- E-Resources"
+      ]
+    },
+    {
+      "title": "# E-Resources",
+      "content": [
+        "[TABLE]",
+        "S.No.\tSubject Name\tLink",
+        "01\tArtificial intelligence\tDownload",
+        "02\tCloud Computing\tDownload",
+        "03\tData Warehousing and Data Mining\tDownload",
+        "04\tIntroduction to Analytics\tDownload",
+        "05\tISM\tDownload",
+        "06\tOOAD\tDownload",
+        "07\tSoftware Testing Methodologies\tDownload",
+        "08\tSWSN\tDownload",
+        "09\tWeb Technologies\tDownload",
+        "[/TABLE]"
+      ]
+    },
+    {
+      "title": "[TABLE]",
+      "content": [
+        "S.No.Subject NameLink",
+        "01\tComputer Organization\tDownload",
+        "02\tDatabase Management Systems\tDownload",
+        "03\tPython Programming\tDownload",
+        "04\tSE\tDownload",
+        "05\tDM\tDownload"
+      ]
+    },
+    {
+      "title": "[TABLE]",
+      "content": [
+        "S.No.Subject NameLink",
+        "01\tDLD\tDownload",
+        "02\tDS\tDownload",
+        "03\tOOPs\tDownload",
+        "04\tP & S\tDownload"
+      ]
+    },
+    {
+      "title": "- Student Degree Verification",
+      "content": [
+        "- New Student Registration",
+        "- Income Declaration Form (2024-25)",
+        "- NCC",
+        "- NSS",
+        "- Achievements",
+        "- Good Governance Document",
+        "- Strategic Plan & Program Development Document",
+        "- Research Policy Document",
+        "- Ambudsperson",
+        "- Route Map",
+        "- Virtual Tour 360",
+        "- Service Rules",
+        "- Online Grievance Cell",
+        "- B Category / Management Application Form",
+        "- Feedback(s)",
+        "- Mandatory Disclosures",
+        "- Code-of-Conduct",
+        "- Home"
+      ]
+    },
+    {
+      "title": "# TKR Campus",
+      "content": []
+    }
+  ]
+}
