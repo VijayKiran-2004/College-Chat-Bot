@@ -1,0 +1,323 @@
+{
+  "sections": [
+    {
+      "title": "Admission 2025-26",
+      "content": "Home About Vision& Mission About the Campus Chairman’s Message Secretary’s Message Audit reports Treasurer’s Message Principal Vice Principal Organogram Admnistration Board of Governors (BOG) Admissions Admission Procedure Admission Details Fee Structure EAPCET Last Rank PGCET LAST RANK POLYCET Last Rank"
+    },
+    {
+      "title": "Academics",
+      "content": "Academic Regulations Academic Calendars Academic Council Minutes Syllabus Dean Academics Dean Student Welfare Departments Civil Engineering Mechanical Engineering Electrical & Electronics Engineering Electronics & Communication Engineering Computer Science and Engineering CSE-AIML(CSM) CSE-DS (CSD) Information Technology MBA Humanities-Sciences Diploma Library Research Examinations About Exam Branch Students Portal Students List Internal marks Notifications Time Tables Downloads Swayam Course RC/RV/CV Guidelines Student Verification Placements Facilities Transport Virtual Lab Incubation Center NCC About NCC NCC Admissions NCC Events Magazine Auditorium Hostel -Girls/boys Sports BANK & ATM Press – Media Coverage Committees Events Professional Societies IEEE Student Chapter CSI Chapter IEEE-PELS RTI Contact"
+    },
+    {
+      "title": "EAMCET Last Rank",
+      "content": {
+        "2024": {
+          "CE": {
+            "OC": {
+              "Boys": 122152,
+              "Girls": 96232
+            },
+            "BC-A": {
+              "Boys": 111345,
+              "Girls": 146172
+            },
+            "BC-B": {
+              "Boys": 144769,
+              "Girls": 10304
+            },
+            "BC-C": {
+              "Boys": 99061,
+              "Girls": 100293
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 157343,
+              "Girls": 166690
+            },
+            "ST": {
+              "Boys": 115968,
+              "Girls": 144935
+            }
+          },
+          "EEE": {
+            "OC": {
+              "Boys": 80116,
+              "Girls": 0
+            },
+            "BC-A": {
+              "Boys": 143300,
+              "Girls": 0
+            },
+            "BC-B": {
+              "Boys": 156950,
+              "Girls": 0
+            },
+            "BC-C": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 86567,
+              "Girls": 0
+            },
+            "ST": {
+              "Boys": 0,
+              "Girls": 0
+            }
+          },
+          "ECE": {
+            "OC": {
+              "Boys": 51014,
+              "Girls": 0
+            },
+            "BC-A": {
+              "Boys": 62130,
+              "Girls": 0
+            },
+            "BC-B": {
+              "Boys": 112696,
+              "Girls": 47296
+            },
+            "BC-C": {
+              "Boys": 47037,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 46171,
+              "Girls": 54350
+            },
+            "ST": {
+              "Boys": 84388,
+              "Girls": 113161
+            }
+          },
+          "CSE": {
+            "OC": {
+              "Boys": 16358,
+              "Girls": 24643
+            },
+            "BC-A": {
+              "Boys": 37413,
+              "Girls": 21251
+            },
+            "BC-B": {
+              "Boys": 25847,
+              "Girls": 17233
+            },
+            "BC-C": {
+              "Boys": 155084,
+              "Girls": 79005
+            },
+            "BC-D": {
+              "Boys": 24439,
+              "Girls": 26180
+            },
+            "BC-E": {
+              "Boys": 37544,
+              "Girls": 53143
+            },
+            "SC": {
+              "Boys": 45057,
+              "Girls": 43375
+            },
+            "ST": {
+              "Boys": 53044,
+              "Girls": 106623
+            }
+          },
+          "CSM": {
+            "OC": {
+              "Boys": 25336,
+              "Girls": 27981
+            },
+            "BC-A": {
+              "Boys": 58517,
+              "Girls": 81926
+            },
+            "BC-B": {
+              "Boys": 22212,
+              "Girls": 32966
+            },
+            "BC-C": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 35972,
+              "Girls": 39438
+            },
+            "ST": {
+              "Boys": 51901,
+              "Girls": 116853
+            }
+          },
+          "CSD": {
+            "OC": {
+              "Boys": 27874,
+              "Girls": 25832
+            },
+            "BC-A": {
+              "Boys": 49905,
+              "Girls": 96670
+            },
+            "BC-B": {
+              "Boys": 42207,
+              "Girls": 48135
+            },
+            "BC-C": {
+              "Boys": 119482,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 42796,
+              "Girls": 48207
+            },
+            "BC-E": {
+              "Boys": 71125,
+              "Girls": 67665
+            },
+            "SC": {
+              "Boys": 79503,
+              "Girls": 71325
+            },
+            "ST": {
+              "Boys": 102907,
+              "Girls": 131224
+            }
+          },
+          "IT": {
+            "OC": {
+              "Boys": 37634,
+              "Girls": 52110
+            },
+            "BC-A": {
+              "Boys": 82558,
+              "Girls": 109328
+            },
+            "BC-B": {
+              "Boys": 42470,
+              "Girls": 45835
+            },
+            "BC-C": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 68888,
+              "Girls": 113032
+            },
+            "ST": {
+              "Boys": 77574,
+              "Girls": 0
+            }
+          }
+        },
+        "2023": {
+          "CE": {
+            "OC": {
+              "Boys": 49423,
+              "Girls": 0
+            },
+            "BC-A": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-B": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-C": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 147798,
+              "Girls": 147221
+            },
+            "ST": {
+              "Boys": 150842,
+              "Girls": 0
+            }
+          },
+          "EEE": {
+            "OC": {
+              "Boys": 127254,
+              "Girls": 0
+            },
+            "BC-A": {
+              "Boys": 89656,
+              "Girls": 0
+            },
+            "BC-B": {
+              "Boys": 94072,
+              "Girls": 0
+            },
+            "BC-C": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-D": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "BC-E": {
+              "Boys": 0,
+              "Girls": 0
+            },
+            "SC": {
+              "Boys": 93976,
+              "Girls": 44383
+            }
+          }
+        }
+      }
+    }
+  ]
+}

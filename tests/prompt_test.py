@@ -326,12 +326,13 @@ for prompt in test_prompts:
     # --- Metric 5: Link Validity ---
     link_label, link_score = check_link_validity(answer)
 
-    # --- Final Accuracy % (balanced, no single dominant metric) ---
+    # --- Final Accuracy % (balanced, fairness-aware — links count!) ---
     src_score = source_appropriateness(prompt, source)
     accuracy_pct = round(
-        (faithfulness_llm * 0.30 +
-         relevance_llm    * 0.25 +
-         completeness_llm * 0.20 +
+        (faithfulness_llm * 0.25 +
+         relevance_llm    * 0.20 +
+         completeness_llm * 0.15 +
+         link_score       * 0.15 +
          bert_f1          * 0.15 +
          src_score        * 0.10) * 100,
         2

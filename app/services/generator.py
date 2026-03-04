@@ -72,7 +72,7 @@ class Generator:
 
         if is_complex:
             print(f"  [Generator] Complex query detected — using detailed prompt.")
-            num_predict = 300  # Allow longer answers for procedures/lists
+            num_predict = 200  # Capped from 300 — saves ~25s on low-end hardware
             prompt = f"""You are the TKRCET College Buddy. {lang_instruction}
 Use ONLY the provided context. Be thorough and structured for this detailed question about TKRCET.
 If steps are involved, use a numbered list. Use **bold** for key terms.
@@ -132,7 +132,7 @@ Answer:"""
                 return self._generate_sync(prompt, quick_links_section, source_links_section, context, temperature, num_predict)
         except Exception as e:
             print(f"⚠ Ollama error: {e}")
-            fallback = quick_links_section + f"Here's what I found:\n\n{context}" + source_links_section
+            fallback = quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}" + source_links_section
             return self._yield_fallback(fallback) if stream else fallback
 
     def _generate_sync(self, prompt, quick_links_section, source_links_section, context, temperature, num_predict=150):
@@ -156,7 +156,7 @@ Answer:"""
             if answer:
                 return quick_links_section + answer + source_links_section
         
-        return quick_links_section + f"Here's what I found:\n\n{context}" + source_links_section
+        return quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}" + source_links_section
 
     def _generate_stream(self, prompt, quick_links_section, source_links_section, context, temperature, num_predict=150):
         """Internal stream generation"""

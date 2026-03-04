@@ -5,6 +5,8 @@ import json
 import argparse
 from pathlib import Path
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 def convert_to_ultrarag_format(input_path, output_path):
     """
     Convert unified_vectors.json to UltraRAG corpus format (JSONL)
@@ -67,9 +69,9 @@ def verify_conversion(jsonl_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert unified_vectors.json to UltraRAG format')
-    parser.add_argument('--input', default='data/chunks/unified_vectors.json',
+    parser.add_argument('--input', default=str(_PROJECT_ROOT / 'data' / 'chunks' / 'unified_vectors.json'),
                         help='Input JSON file path')
-    parser.add_argument('--output', default='data/chunks/corpus_ultrarag.jsonl',
+    parser.add_argument('--output', default=str(_PROJECT_ROOT / 'data' / 'chunks' / 'corpus_ultrarag.jsonl'),
                         help='Output JSONL file path')
     parser.add_argument('--verify', action='store_true',
                         help='Verify the output file after conversion')
@@ -79,7 +81,11 @@ if __name__ == '__main__':
     print("=" * 70)
     print("CORPUS CONVERTER - UltraRAG Format")
     print("=" * 70 + "\n")
-    
+
+    # Auto-create output directory
+    from pathlib import Path as _Path
+    _Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+
     # Convert
     count = convert_to_ultrarag_format(args.input, args.output)
     

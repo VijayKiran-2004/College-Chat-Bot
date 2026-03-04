@@ -1,0 +1,80 @@
+{
+  "sections": [
+    {
+      "title": "Directions",
+      "content": [
+        {
+          "type": "list",
+          "items": [
+            {
+              "bus": "Koti-R.N.Reddy(Bus No’s:104R,1D/104R)",
+              "frequency": "every 20-30 Minutes",
+              "route": "Koti- chaderghat- nalgonda’x’Roads flyover- saidabad – santoshnagar- champapet – green park colony- karmanghat – gayatri nagar- Tkr Kaman – TKR ENGINEERING COLLEGE"
+            },
+            {
+              "bus": "Nampally-R.N.Reddy(Bus No:101R)",
+              "frequency": "Every 1 hour",
+              "route": "Nampally- Abids – Koti – Chaderghat – malakpet – Moosarambagh – Gaddiannaram – saroornagar lake- singareni colony – green park colony- karmanghat- gayatri nagar- tkr Kaman- TKR ENGINEERING COLLEGE"
+            },
+            {
+              "bus": "Uppal-R.N.reddy(Bus no:90R)",
+              "frequency": "Every 15-20 Minutes",
+              "route": "Uppal- Kamineni Hospital- L.B.Nagar- Sagar”X’Roads- TKR Kaman- TKR ENGINEERING COLLEGE"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "content": "In case of not getting a bus at an appropriate time, don’t get panic, instead follow this:"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "location": "Koti",
+              "instructions": [
+                "Get into a bus which lands you in Karmanghat.",
+                "Get a sharing auto directly to the college, at a very nominal charge."
+              ]
+            },
+            {
+              "location": "L.B.nagar",
+              "instructions": [
+                "Get a sharing auto directly to the college, at a very nominal charge."
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "content": "From Koti- To TKR ENGINEERING COLLEGE Route(major stops): Koti- chaderghat- nalgonda’x’Roads flyover- saidabad – santoshnagar- champapet – green park colony- karmanghat – gayatri nagar- Tkr Kaman – TKR ENGINEERING COLLEGE"
+        },
+        {
+          "type": "text",
+          "content": "From L.B.Nagar- To TKR ENGINEERING COLLEGE Route(major stops): L.B.Nagar- Sagar”X’Roads- TKR Kaman- TKR ENGINEERING COLLEGE."
+        },
+        {
+          "type": "text",
+          "content": "From Uppal- To TKR ENGINEERING COLLEGE Route(Major stops): Uppal- Kamineni Hospital- L.B.Nagar- Sagar”X’Roads- TKR Kaman- TKR ENGINEERING COLLEGE."
+        },
+        {
+          "type": "text",
+          "content": "ROUTE MAP FROM KOTI:"
+        },
+        {
+          "type": "text",
+          "content": "ROUTE MAP FROM UPPAL & L.B.NAGAR:"
+        },
+        {
+          "type": "list",
+          "items": [
+            {
+              "bus": "College buses",
+              "frequency": "College buses will ply from KOTI Womens College and L.B.NAGAR Chowrasta  from  8:45 AM"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

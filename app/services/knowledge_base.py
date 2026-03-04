@@ -124,6 +124,12 @@ class KnowledgeBase:
         if 'vice principal' in query_lower:
             return f"Vice Principal: {self.data['personnel']['vice_principal']}"
 
+        # Full college name
+        if any(p in query_lower for p in ['full name', 'full form', 'what does tkrcet stand', 'expand tkrcet', 'college name']):
+            full_name = self.data.get('history', {}).get('full_name', 
+                'Teegala Krishna Reddy College of Engineering and Technology (TKRCET)')
+            return f"**Full Name:** {full_name}"
+
         if 'secretary' in query_lower:
             return f"Secretary: {self.data['personnel']['secretary']}"
         if 'chairman' in query_lower:
@@ -164,7 +170,7 @@ class KnowledgeBase:
             hours = self.data['timings']['working_hours']
             return f"**College Timings:**\n\n🕐 {hours}\n\n**Lunch Break:** {lunch}"
         
-        if any(word in query_lower for word in ['address', 'location', 'where is', 'where are']):
+        if any(word in query_lower for word in ['address', 'location', 'where is', 'where are', 'where the college', 'where is tkrcet', 'situated', 'located']):
             h = self.data['history']
             return f"**TKRCET Location:**\n\n📍 {h['location']}\n\n**Established:** {h['established']}\n**Affiliation:** {h['affiliation']}\n**Status:** {h['status']}\n**Campus Size:** {h['campus_size']}"
         
@@ -176,6 +182,16 @@ class KnowledgeBase:
         if 'fee' in query_lower and ('pay' in query_lower or 'payment' in query_lower):
             return "**Fee Payment:**\n\nFees can be paid at the Accounts Department in the Administrative Block. Payment modes include:\n• Cash\n• Demand Draft\n• Online Transfer\n\nFor detailed payment procedures, please contact the Accounts Department or visit the college office."
         
+        if any(word in query_lower for word in ['library head', 'head of library', 'librarian', 'library in charge', 'library staff']):
+            lib_head = self.data.get('personnel', {}).get('library_head', None)
+            if lib_head:
+                return f"**Head of Library (Librarian):** {lib_head}"
+
+        if any(word in query_lower for word in ['placement head', 'head of placement', 'placement officer', 'tpo', 't&p', 'placement cell head', 'placement in charge']):
+            ph = self.data.get('personnel', {}).get('placement_head', None)
+            if ph:
+                return f"**Training & Placement Officer:** {ph}"
+
         if any(word in query_lower for word in ['transport', 'bus', 'buses', 'route']):
             t = self.data['facilities']['transport']
             return f"**College Transport:**\n\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"

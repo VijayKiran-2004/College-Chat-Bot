@@ -5,6 +5,8 @@
         "dean_academics": "Dr. A. Suresh Rao (also Vice Principal & HoD of CSE)",
         "secretary": "Dr. T. Harinath Reddy",
         "chairman": "Sri. Teegala Krishna Reddy",
+        "library_head": "Mrs. B. Vijaya Lakshmi (Librarian, TKRCET)",
+        "placement_head": "Dr. T. Harinath Reddy (Training & Placement Officer)",
         "hod": {
             "cse": "Dr. A. Suresh Rao",
             "cse-aiml": "Dr. B. Sunil Srinivas",
@@ -24,6 +26,7 @@
         "lunch_break": "12:40 PM to 1:20 PM"
     },
     "history": {
+        "full_name": "TKR College of Engineering and Technology (TKRCET)",
         "established": "2002",
         "affiliation": "JNTUH (Jawaharlal Nehru Technological University Hyderabad)",
         "status": "Autonomous (UGC confirmed)",
@@ -102,11 +105,11 @@
         "approvals": "AICTE approved, UGC recognized 2(f) & 12(B)"
     },
     "fees": {
-        "btech": "Tuition fee for B.Tech is approximately ₹85,000 - ₹1,00,000 per year (depending on the quota and branch).",
-        "mtech": "Tuition fee for M.Tech is approximately ₹57,000 per year.",
-        "mba": "Tuition fee for MBA is approximately ₹50,000 per year.",
-        "hostel": "Hostel fee is roughly ₹70,000 - ₹80,000 per year (including food and accommodation).",
-        "transport": "Transport fee varies by route, typically between ₹20,000 to ₹35,000 per year."
+        "btech": "Tuition fee for B.Tech is approximately Rs.85,000 - Rs.1,00,000 per year (depending on the quota and branch).",
+        "mtech": "Tuition fee for M.Tech is approximately Rs.57,000 per year.",
+        "mba": "Tuition fee for MBA is approximately Rs.50,000 per year.",
+        "hostel": "Hostel fee is roughly Rs.70,000 - Rs.80,000 per year (including food and accommodation).",
+        "transport": "Transport fee varies by route, typically between Rs.20,000 to Rs.35,000 per year."
     },
     "events": {
         "technical_fest": "Shiznay (Annual Technical Fest)",

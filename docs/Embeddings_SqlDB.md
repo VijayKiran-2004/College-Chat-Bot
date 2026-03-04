@@ -1,63 +1,69 @@
-##  Data Storage & Embedding Strategy
+# Data Storage & Embedding Strategy
 
-###  Student Dataset — Stored in SQL Database
-The student dataset contains **structured and critical academic records** such as Roll Number, Name, CGPA, Credits, Results, and Placement details.  
-This data is stored in an **SQL database (`students.db`)
+The chatbot uses **three different storage systems** depending on the type of data. Each is chosen for accuracy and retrieval speed.
 
-** because:
-- SQL is ideal for **structured relational data**
-- Ensures **100% accuracy** (prevents hallucinations)
-- Supports **fast indexed queries**
-- Maintains **data consistency & constraints**
-- Industry-standard method for handling academic records
+---
 
-SQL is used for deterministic queries like:
-- Student details
-- CGPA / Credits
-- Result status
-- Placement information
+## 1. Student Dataset — SQLite Database
 
+**File:** `app/database/students.db`
 
+Student academic records are stored in **SQL** because:
+- Data is **structured and relational** (Roll No, CGPA, Credits, Results, Placements)
+- SQL guarantees **100% accuracy** — no hallucinations possible
+- Supports fast indexed queries by roll number or name
+- Industry-standard for transactional academic data
 
-###  FAQ Dataset — Embedded for Semantic Retrieval
-The FAQ dataset consists of **question–answer pairs** and is converted into embeddings to enable **semantic search** instead of simple text matching.
+**Example queries handled by SQL:**
+- "What is my CGPA?"
+- "How many credits have I completed?"
+- "What are my internal marks for OS?"
+- "Am I placed?"
 
-#### **Embedding Model Used**
-`BAAI/bge-large-en-v1.5`
+**Managed by:** `app/services/sql_system.py`
 
-#### **Embedding Technique**
-- Built using **Sentence Transformers**
-- Generates **dense vector embeddings**
-- Embeddings are **normalized** for stable cosine similarity
-- Designed specifically for **Retrieval-Augmented Generation (RAG)** systems
-- Enables understanding of paraphrased questions and user intent
+---
 
-This allows retrieving the correct FAQ even when the user phrases the question differently.
+## 2. FAQ Dataset — Vector Embeddings
 
+**Source:** `data/rawdata/faq_rows.json`  
+**Stored in:** `data/chunks/unified_vectors.json`
 
+300+ curated Q&A pairs are embedded for **semantic search**. This allows the chatbot to match user questions even when phrased differently from the stored FAQ.
 
-###  Web-Scraped College Data — Embedded for Knowledge Retrieval
-The web-scraped college content contains **long unstructured informational content** such as college overview, departments, facilities, and accreditation information.
+#### Embedding Model
+`all-MiniLM-L6-v2` (SentenceTransformers)
 
-The same embedding approach is used here.
+#### Technique
+- Each FAQ (question + answer) is embedded as a single dense vector (384 dimensions)
+- Vectors are normalized for stable cosine similarity scoring
+- Stored in FAISS index for fast nearest-neighbor lookup
 
-#### **Embedding Model Used**
-`BAAI/bge-large-en-v1.5`
+---
 
-#### **Embedding Technique**
-- Web content is chunked into readable segments
-- Each chunk is converted into **semantic vector embeddings**
-- Stored for similarity-based retrieval
-- Enables deep contextual understanding
+## 3. Web-Scraped College Data — Vector Embeddings
 
-Using the **same embedding model** for both FAQ and Web data ensures:
-- Both datasets exist in the **same vector space**
-- Uniform similarity scoring
-- Highly accurate retrieval results
+**Source:** `data/scraped_data/outputs/*.json` (~97 files)  
+**Stored in:** `data/chunks/unified_vectors.json`
 
+Long-form college website content (departments, facilities, committees, etc.) is chunked and embedded for knowledge retrieval.
 
+#### Embedding Model
+`all-MiniLM-L6-v2` (same as FAQ — ensures both live in the same vector space)
 
-###  Final Summary
-Student Dataset - SQL Database - Structured, accuracy required 
-FAQ Dataset - Vector Embeddings - Semantic question answering 
-Web Data - Vector Embeddings - Contextual knowledge retrieval 
+#### Technique
+- Content split into 500-char chunks with 100-char overlap
+- Each chunk embedded to a 384-dim vector
+- Retrieved via **hybrid FAISS + BM25** search
+
+---
+
+## Summary
+
+| Data Type | Storage | Why |
+|---|---|---|
+| Student Records | SQLite (`students.db`) | Structured, accuracy-critical |
+| FAQ Pairs | Vector Embeddings (FAISS) | Semantic question matching |
+| Website Content | Vector Embeddings (FAISS+BM25) | Hybrid contextual retrieval |
+
+**All embeddings use `all-MiniLM-L6-v2`** — ensuring FAQ and web data share the same vector space for uniform similarity scoring.

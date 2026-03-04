@@ -1079,18 +1079,41 @@
 
         <div class="file-card">
             <span class="file-path">docs/chunking.md</span><span class="file-type">Markdown — Technical Doc</span>
-            <h4>Text Chunking Strategy</h4>
-            <p>Explains why and how semantic chunking (vs. naive fixed-size chunking) is used. Details the percentile
-                breakpoint method from LangChain's SemanticChunker and how contextual prefix enrichment improves
-                retrieval quality.</p>
+            <h4>Dual-Stage Text Chunking Strategy</h4>
+            <p>Documents the sophisticated two-part approach used to balance speed and semantic accuracy:</p>
+            <ul>
+                <li><strong>Stage 1: Sentence-Boundary Chunking</strong> (in <code>generate_vectors.py</code>) — Splits
+                    text into ~500 character blocks using punctuation breaks to preserve readability. Includes a
+                    50-character overlap to maintain context across boundaries.</li>
+                <li><strong>Stage 2: Semantic Chunking</strong> (in <code>ingest.py</code>) — Uses LangChain's
+                    <code>SemanticChunker</code> to analyze the meaning of sentences. It breaks chunks when the
+                    underlying topic changes (percentile breakpoint), ensuring logical grouping for the database.
+                </li>
+                <li><strong>Contextual Enrichment</strong>: Every chunk is prepended with its Page Title and Source URL
+                    so the AI never loses the context of a fact.</li>
+            </ul>
         </div>
 
         <div class="file-card">
             <span class="file-path">docs/Embeddings_SqlDB.md</span><span class="file-type">Markdown — Technical
                 Doc</span>
-            <h4>Embeddings + SQL Integration Notes</h4>
-            <p>Covers how the system blends vector search (RAG) and relational data (SQL) — the design decisions behind
-                having both systems and when each is preferred.</p>
+            <h4>Machine Learning Embeddings: all-MiniLM-L6-v2</h4>
+            <p>Every piece of text in our system (scraped pages, FAQs, student questions) is converted into a
+                <strong>Vector Embedding</strong> using the <code>all-MiniLM-L6-v2</code> model.</p>
+            <ul>
+                <li><strong>What are Embeddings?</strong> They are a list of 384 numbers that represent the
+                    <em>mathematical meaning</em> of a sentence. This allows the bot to understand that "fee structure"
+                    and "how much is the cost" mean the same thing.</li>
+                <li><strong>Why all-MiniLM-L6-v2?</strong> It is the industry standard for lightweight, local RAG. It is
+                    extremely fast (runs on CPU) while being remarkably accurate at capturing semantic meaning.</li>
+                <li><strong>System Roles:</strong>
+                    <ul>
+                        <li><strong>Vector DB:</strong> Stores college knowledge vectors for retrieval.</li>
+                        <li><strong>Intent Detection:</strong> Compares the user's question to "template" vectors for
+                            Student queries vs. General queries to decide which system to use.</li>
+                    </ul>
+                </li>
+            </ul>
         </div>
 
         <div class="file-card">
@@ -1342,8 +1365,8 @@
             <tr>
                 <td>3</td>
                 <td><code>ollama pull gemma3:1b</code></td>
-                <td>Download Gemma 3 model (for intent routing)</td>
-                <td>First time setup only</td>
+                <td>Download Gemma 3 model (for evaluation judge)</td>
+                <td>Optional (for testing only)</td>
             </tr>
             <tr>
                 <td>4</td>
@@ -1366,7 +1389,7 @@
             <tr>
                 <td>7</td>
                 <td><code>python scripts/corpus_converter.py</code></td>
-                <td>Convert to UltraRAG format</td>
+                <td>Convert to UltraRAG format (JSONL)</td>
                 <td>After vector generation or cleanup</td>
             </tr>
             <tr>

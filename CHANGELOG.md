@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.0] - March 2026
+
+### Added
+- **Scrapling Stealth Engine**: Replaced the legacy Playwright scraper with the Scrapling engine to bypass the MalCare firewall on the TKRCET website.
+- **StealthyFetcher Implementation**: Includes randomized delays (3-7s), Google Referer headers, and Chrome fingerprinting to evade bot detection.
+- **Robust Text Extraction**: Improved content parsing using fallback CSS selectors to ensure full data capture even when standard visible text extraction is empty.
+- **Synchronous Scraper Workflow**: Refactored `tkrcet_scraper.py` for a stable, synchronous execution flow compatible with the latest Scrapling and Groq clients.
+
 ## [3.6.0] - March 2026
 
 ### Added

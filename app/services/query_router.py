@@ -52,10 +52,23 @@ class QueryRouter:
         # Detect intent
         intent = self.intent_detector.detect_intent(query)
         
-        # Override for specific keywords that might be misclassified as student queries (e.g., 'sports fest')
-        general_keywords = ['fest', 'tournament', 'sports', 'event', 'club', 'campus', 'hostel', 'bus', 'transport']
+        # Override for specific keywords that might be misclassified as student queries
+        general_keywords = [
+            'fest', 'tournament', 'sports', 'event', 'club', 'campus',
+            'hostel', 'bus', 'transport',
+            # Procedural / result queries go to RAG (not SQL)
+            'result', 'results', 'marks', 'attendance',
+            # Personnel / info queries should NOT hit SQL
+            'head of', 'who is head', 'who runs', 'in charge',
+        ]
         if any(keyword in query.lower() for keyword in general_keywords):
            intent = 'general'
+        
+        # Also force 'general' if the query starts with 'who is' without student identifiers
+        query_lower = query.lower().strip()
+        student_ids = ['placed', 'topper', 'highest cgpa', 'highest package', 'roll']
+        if query_lower.startswith('who is') and not any(s in query_lower for s in student_ids):
+            intent = 'general'
         
         if intent == 'greeting':
             # Fast-track greetings: Skip RAG retrieval

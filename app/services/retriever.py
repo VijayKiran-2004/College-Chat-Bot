@@ -1,5 +1,6 @@
 import os
 import json
+import numpy as np
 from pathlib import Path
 from app.services.embedding_service import get_embedding_model
 
@@ -44,7 +45,7 @@ class Retriever:
             return None
 
     def retrieve(self, query, top_k=5):
-        """Retrieve using ChromaDB (Semantic Search) with relevance filtering"""
+        """Retrieve using ChromaDB (Semantic Search) with relevance filtering and re-ranking"""
         if not self.collection:
             print("⚠ Database not initialized, skipping retrieval")
             return []
@@ -54,9 +55,11 @@ class Retriever:
             shared_model = get_embedding_model()
             query_embeddings = shared_model.encode([query]).tolist()
             
+            # Retrieve broader set (top_k+2) then re-rank down to top_k
+            fetch_k = max(top_k + 2, 4)
             results = self.collection.query(
                 query_embeddings=query_embeddings,
-                n_results=top_k
+                n_results=fetch_k
             )
             
             docs = []
@@ -71,7 +74,7 @@ class Retriever:
                 metadata = results['metadatas'][0][i] if results['metadatas'] else {}
                 distance = distances[i] if i < len(distances) else 0
                 
-                # Filter out low-relevance documents
+                # Filter out very low-relevance documents
                 if distance > 1.0:
                     print(f"  [Filtering] Skipping low-relevance doc (distance: {distance:.3f})")
                     continue
@@ -94,6 +97,19 @@ class Retriever:
                         "metadata": metadata,
                         "relevance_score": 1 - distance
                     })
+            
+            # --- Re-Ranker: score each doc against query using all-MiniLM-L6-v2 ---
+            if len(docs) > 1:
+                from sklearn.metrics.pairwise import cosine_similarity
+                query_emb = shared_model.encode([query], show_progress_bar=False)
+                doc_texts = [d["contents"][:500] for d in docs]  # truncate to save compute
+                doc_embs = shared_model.encode(doc_texts, show_progress_bar=False)
+                rerank_scores = cosine_similarity(query_emb, doc_embs)[0]
+                for i, doc in enumerate(docs):
+                    doc["relevance_score"] = float(rerank_scores[i])
+                # Sort by re-rank score (highest first) and trim to top_k
+                docs = sorted(docs, key=lambda d: d["relevance_score"], reverse=True)[:top_k]
+                print(f"  [Re-ranker] Best score: {docs[0]['relevance_score']:.3f}")
             
             return docs
             
