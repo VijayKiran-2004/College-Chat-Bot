@@ -1,10 +1,11 @@
 import asyncio
-from playwright.async_api import async_playwright
-from groq import AsyncGroq
 import json
-import re
 import os
+import re
 from pathlib import Path
+
+from groq import AsyncGroq
+from playwright.async_api import async_playwright
 
 # =============================================================
 # CONFIG
@@ -15,7 +16,8 @@ from pathlib import Path
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY environment variable not set. Please set it to proceed.")
+    raise ValueError(
+        "GROQ_API_KEY environment variable not set. Please set it to proceed.")
 
 client = AsyncGroq(api_key=GROQ_API_KEY)
 
@@ -26,6 +28,7 @@ COMBINED_OUTPUT = "data/scraped_data/all_results.json"
 # =============================================================
 # PLAYWRIGHT: Extract clean visible text
 # =============================================================
+
 
 async def extract_text(browser, url):
     """Navigates to URL and extracts clean, structured text using a shared browser instance."""
@@ -49,7 +52,8 @@ async def extract_text(browser, url):
 
         print("📄 Extracting visible text...")
 
-        # Optimized Extraction Logic: Prevents text duplication by checking tags
+        # Optimized Extraction Logic: Prevents text duplication by checking
+        # tags
         text = await page.evaluate("""
             () => {
                 function extract(el) {
@@ -83,6 +87,7 @@ async def extract_text(browser, url):
 # =============================================================
 # GROQ: Convert clean text → structured JSON
 # =============================================================
+
 
 async def extract_json(clean_text):
     """Sends cleaned text to Groq LLM to convert into structured JSON format."""
@@ -123,6 +128,7 @@ TEXT:
 # HELPER: Convert URL → safe file name
 # =============================================================
 
+
 def sanitize_filename(url):
     """Creates a Windows-safe filename from a URL."""
     clean = re.sub(r"https?://", "", url)
@@ -133,6 +139,7 @@ def sanitize_filename(url):
 # =============================================================
 # MAIN CRAWLER
 # =============================================================
+
 
 async def main():
     # Setup directories
@@ -156,9 +163,13 @@ async def main():
             urls.append(match.group())
 
     final_urls = [
-        u for u in urls if not any(ext in u.lower() for ext in [".pdf", ".jpg", ".png", ".zip", ".docx"])
-        and "#pdf" not in u.lower()
-    ]
+        u for u in urls if not any(
+            ext in u.lower() for ext in [
+                ".pdf",
+                ".jpg",
+                ".png",
+                ".zip",
+                ".docx"]) and "#pdf" not in u.lower()]
 
     print(f"\n🔗 URLs to process: {len(final_urls)}")
     combined_results = []
@@ -167,12 +178,12 @@ async def main():
     async with async_playwright() as p:
         print("🚀 Starting Chromium...")
         browser = await p.chromium.launch(headless=True)
-        
+
         for url in final_urls:
             try:
                 # 1. Extraction
                 text = await extract_text(browser, url)
-                
+
                 # 2. Structuring
                 json_data = await extract_json(text)
 
@@ -203,12 +214,12 @@ async def main():
     with open(COMBINED_OUTPUT, "w", encoding="utf-8") as f:
         json.dump(combined_results, f, indent=2, ensure_ascii=False)
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print("🎉 SCRAPING COMPLETE")
     print(f"Total processed: {len(combined_results)}")
     print(f"Individual files: ./{OUTPUT_DIR}/")
     print(f"Master file: {COMBINED_OUTPUT}")
-    print("="*50 + "\n")
+    print("=" * 50 + "\n")
 
 # =============================================================
 

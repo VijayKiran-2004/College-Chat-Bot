@@ -4,12 +4,15 @@ Terminal-based College Chatbot
 Hybrid RAG-SQL System using Ollama and SQLite
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
+from app.services.query_router import QueryRouter
+
 # Fix for WinError 1114 (DLL initialization failed)
-# Must import sentence_transformers/torch BEFORE pandas/numpy to ensure correct DLL loading
+# Must import sentence_transformers/torch BEFORE pandas/numpy to ensure
+# correct DLL loading
 try:
     from sentence_transformers import SentenceTransformer
 except ImportError:
@@ -18,12 +21,10 @@ except ImportError:
 # Add app directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.services.query_router import QueryRouter
-
 
 class TerminalChatbot:
     """Interactive terminal chatbot interface"""
-    
+
     def __init__(self):
         """Initialize chatbot with Hybrid RAG-SQL system"""
         print("\n" + "=" * 70)
@@ -31,7 +32,7 @@ class TerminalChatbot:
         print("=" * 70)
         print("Initializing chatbot system...")
         print()
-        
+
         try:
             self.router = QueryRouter()
             self.running = True
@@ -80,7 +81,7 @@ class TerminalChatbot:
             # Access internal components for status
             rag = self.router.rag_system
             sql = self.router.sql_system
-            
+
             num_docs = len(rag.documents)
             print(f"✓ Knowledge Base: {num_docs} documents loaded")
             print(f"✓ Embedding Model: all-MiniLM-L6-v2")
@@ -96,17 +97,17 @@ class TerminalChatbot:
         if not self.running:
             print("\n✗ Chatbot could not be initialized. Exiting.")
             return
-        
+
         self.print_welcome()
-        
+
         while True:
             try:
                 # Get user input
                 user_input = input("You: ").strip()
-                
+
                 if not user_input:
                     continue
-                
+
                 # Handle commands
                 if user_input.lower() in ['exit', 'quit']:
                     print("\n" + "=" * 70)
@@ -114,32 +115,33 @@ class TerminalChatbot:
                     print("=" * 70 + "\n")
                     self.router.close()
                     break
-                
+
                 elif user_input.lower() == 'help':
                     self.print_help()
-                
+
                 elif user_input.lower() == 'clear':
                     os.system('cls' if os.name == 'nt' else 'clear')
                     self.print_welcome()
-                
+
                 elif user_input.lower() == 'status':
                     self.print_status()
-                
+
                 else:
                     # Process query through Hybrid system
                     print("\nAssistant: ", end="", flush=True)
-                    
+
                     try:
                         # Direct call to router logic
                         # We print a newline first because the router might print internal logs (rare but possible)
-                        # Actually router returns a string, so we just print it.
+                        # Actually router returns a string, so we just print
+                        # it.
                         answer = self.router(user_input)
                         print(answer)
                     except Exception as e:
                         print(f"[Error processing query: {str(e)}]")
-                    
+
                     print()
-                
+
             except KeyboardInterrupt:
                 print("\n\n" + "=" * 70)
                 print("Chatbot interrupted. Goodbye!")

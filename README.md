@@ -49,12 +49,12 @@ cd College-Chat-Bot
 > You **MUST** go into the project folder first!
 > ```bash
 > cd College-Chat-Bot
-> ```
+> ```.\.venv\Scripts\Activate.ps1
 
 ```bash
 # Windows (PowerShell)
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+
 
 # Linux/Mac
 python3 -m venv .venv

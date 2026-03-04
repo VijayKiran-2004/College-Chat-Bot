@@ -2,7 +2,9 @@
 Refresh Logs - Archives the current log and creates a fresh multi-sheet Excel file.
 Usage: python tools/refresh_logs.py
 """
-import sys, os, shutil
+import os
+import shutil
+import sys
 from datetime import datetime
 
 if sys.platform.startswith('win'):
@@ -12,8 +14,8 @@ if sys.platform.startswith('win'):
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font
 
-log_dir   = 'logs'
-log_path  = f'{log_dir}/response_log.xlsx'
+log_dir = 'logs'
+log_path = f'{log_dir}/response_log.xlsx'
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 os.makedirs(log_dir, exist_ok=True)
 

@@ -1,159 +1,193 @@
 """
 Query Router - Intelligent routing between RAG and SQL systems
 """
-from app.services.intent_detector import IntentDetector
-from app.services.ultra_rag import UltraRAGSystem
-from app.services.sql_system import SQLSystem
+
 from app.services.chain import DeepReasoningChain
+from app.services.intent_detector import IntentDetector
+from app.services.sql_system import SQLSystem
+from app.services.ultra_rag import UltraRAGSystem
+
 
 class QueryRouter:
     def __init__(self):
-        """Initialize query router with all systems"""
+        """Initialize query router with all systems."""
         print("Initializing Query Router...")
-        
+
         from sentence_transformers import SentenceTransformer
+
         print("Loading shared SentenceTransformer model...")
-        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
         print("✓ Shared semantic model loaded")
-        
-        self.intent_detector = IntentDetector(semantic_model=self.semantic_model)
+
+        self.intent_detector = IntentDetector(
+            semantic_model=self.semantic_model
+        )
         print("✓ Intent Detector loaded")
-        
-        self.rag_system = UltraRAGSystem(semantic_model=self.semantic_model)  # Using new UltraRAG system
+
+        self.rag_system = UltraRAGSystem(
+            semantic_model=self.semantic_model
+        )
         print("✓ UltraRAG System loaded")
-        
+
         self.sql_system = SQLSystem()
         print("✓ SQL System loaded")
-        
-        # Initialize Deep Reasoning Chain with existing systems (Unified Brain)
+
         self.reasoning_chain = DeepReasoningChain(
             rag_system=self.rag_system,
-            sql_system=self.sql_system
+            sql_system=self.sql_system,
         )
         print("✓ Deep Reasoning Chain loaded")
-        
+
         print("✓ Query Router ready!\n")
-    
+
     def route_query(self, query, chat_history=None):
         """
-        Route query to appropriate system(s)
-        
+        Route query to appropriate system(s).
+
         Args:
             query: Natural language query
-            chat_history: Optional list of previous conversation turns for context
-        
+            chat_history: Optional conversation history
+
         Returns:
-            dict: {
-                "response": str,
-                "source": str,
-                "accuracy": str  # Real confidence score
-            }
+            dict with response, source and accuracy
         """
-        # Detect intent
+
         intent = self.intent_detector.detect_intent(query)
-        
-        # Override for specific keywords that might be misclassified as student queries (e.g., 'sports fest')
-        general_keywords = ['fest', 'tournament', 'sports', 'event', 'club', 'campus', 'hostel', 'bus', 'transport']
+
+        general_keywords = [
+            "fest",
+            "tournament",
+            "sports",
+            "event",
+            "club",
+            "campus",
+            "hostel",
+            "bus",
+            "transport",
+        ]
+
         if any(keyword in query.lower() for keyword in general_keywords):
-           intent = 'general'
-        
-        if intent == 'greeting':
-            # Fast-track greetings: Skip RAG retrieval
-            result = self.rag_system(query, is_greeting=True, return_dict=True)
+            intent = "general"
+
+        if intent == "greeting":
+
+            result = self.rag_system(
+                query,
+                is_greeting=True,
+                return_dict=True,
+            )
+
             if isinstance(result, dict):
-                 response = result.get('response')
-                 source = result.get('source', 'Greeting Fast-track')
-                 confidence = result.get('confidence', 100)
+                response = result.get("response")
+                source = result.get(
+                    "source",
+                    "Greeting Fast-track",
+                )
+                confidence = result.get("confidence", 100)
             else:
-                 response = result
-                 source = "Greeting Fast-track"
-                 confidence = 100
-            
+                response = result
+                source = "Greeting Fast-track"
+                confidence = 100
+
             return {
                 "response": response,
                 "source": source,
-                "accuracy": f"{confidence}%"
+                "accuracy": f"{confidence}%",
             }
 
-        elif intent == 'general':
-            # Use RAG system normally
-            result = self.rag_system(query, return_dict=True)
+        elif intent == "general":
+
+            result = self.rag_system(
+                query,
+                return_dict=True,
+            )
+
             if isinstance(result, dict):
-                 response = result.get('response')
-                 source = result.get('source', 'RAG/Knowledge Base')
-                 confidence = result.get('confidence', 0)
+                response = result.get("response")
+                source = result.get(
+                    "source",
+                    "RAG/Knowledge Base",
+                )
+                confidence = result.get("confidence", 0)
             else:
-                 response = result
-                 source = "RAG/Knowledge Base"
-                 confidence = 0
-            
+                response = result
+                source = "RAG/Knowledge Base"
+                confidence = 0
+
             return {
                 "response": response,
                 "source": source,
-                "accuracy": f"{confidence}%"
+                "accuracy": f"{confidence}%",
             }
-        
-        elif intent == 'student':
-            # Use SQL system only (with context for follow-up questions)
-            response = self.sql_system.query_students(query, chat_history=chat_history)
+
+        elif intent == "student":
+
+            response = self.sql_system.query_students(
+                query,
+                chat_history=chat_history,
+            )
+
             return {
                 "response": response,
                 "source": "SQL Database",
-                "accuracy": "100%"  # SQL is deterministic
+                "accuracy": "100%",
             }
-        
-        elif intent == 'hybrid':
-            # Use Deep Reasoning Chain for complex queries
+
+        elif intent == "hybrid":
+
             print("  -> Routing to Agent (Deep Reasoning Chain)")
             response = self.reasoning_chain.run(query)
+
             return {
                 "response": response,
                 "source": "Deep Reasoning Agent",
-                "accuracy": "N/A"  # Agent uses multiple sources
+                "accuracy": "N/A",
             }
-        
+
         else:
-            # Fallback to Agent if intent is unclear (Safety Net)
+
             print("  -> Intent unclear, routing to Agent")
             response = self.reasoning_chain.run(query)
+
             return {
                 "response": response,
                 "source": "Deep Reasoning Agent (Fallback)",
-                "accuracy": "N/A"
+                "accuracy": "N/A",
             }
 
-    
     def __call__(self, query, chat_history=None):
-        """Make class callable"""
+        """Make router callable."""
         result = self.route_query(query, chat_history=chat_history)
+
         if isinstance(result, dict):
-            return result['response'] # For simple string compatibility
+            return result["response"]
+
         return result
-    
+
     def close(self):
-        """Close all connections"""
+        """Close all connections."""
         self.sql_system.close()
 
+
 if __name__ == "__main__":
-    # Test query router
     router = QueryRouter()
-    
-    print("="*70)
+
+    print("=" * 70)
     print("TESTING QUERY ROUTER")
-    print("="*70 + "\n")
-    
+    print("=" * 70 + "\n")
+
     test_queries = [
-        "Who is the principal?",  # general -> RAG
-        "What are college timings?",  # general -> RAG
-        "List all CSE students",  # student -> SQL
-        "Show students with CGPA > 8.5",  # student -> SQL
+        "Who is the principal?",
+        "What are college timings?",
+        "List all CSE students",
+        "Show students with CGPA > 8.5",
     ]
-    
+
     for query in test_queries:
         print(f"Query: {query}")
-        print("-"*70)
+        print("-" * 70)
         response = router(query)
         print(f"Response: {response}")
         print("\n")
-    
+
     router.close()

@@ -7,6 +7,7 @@ from pathlib import Path
 INPUT_FILE = "all_results.json"
 OUTPUT_FILE = "app/database/vectordb/scraped_data.jsonl"
 
+
 def flatten_content(content):
     """Recursively flattens various content types (str, list, dict) into a single string."""
     if isinstance(content, str):
@@ -27,10 +28,11 @@ def flatten_content(content):
         return text
     return str(content)
 
+
 def main():
-    print("="*70)
+    print("=" * 70)
     print("PREPARING DATA FOR INGESTION")
-    print("="*70)
+    print("=" * 70)
 
     if not os.path.exists(INPUT_FILE):
         print(f"❌ Error: {INPUT_FILE} not found. Did the scraper finish?")
@@ -49,7 +51,7 @@ def main():
         for entry in all_data:
             url = entry.get("url")
             data = entry.get("data", {})
-            
+
             if "error" in entry:
                 continue
 
@@ -59,17 +61,17 @@ def main():
 
             full_content = ""
             main_title = "Unknown"
-            
+
             for i, section in enumerate(sections):
                 title = section.get("title", "").strip()
                 content = section.get("content", "")
-                
+
                 if i == 0 and title:
                     main_title = title.replace("#", "").strip()
-                    
+
                 if title:
                     full_content += f"{title}\n"
-                
+
                 full_content += flatten_content(content) + "\n\n"
 
             if len(full_content.strip()) < 50:
@@ -91,7 +93,8 @@ def main():
     print(f"✓ Successfully processed {count} documents.")
     print(f"✓ Saved to: {OUTPUT_FILE}")
     print("\nNext: Run the vector generation script.")
-    print("="*70)
+    print("=" * 70)
+
 
 if __name__ == "__main__":
     main()

@@ -5,17 +5,17 @@ Usage:  python tools/generate_metrics_pdf.py
 """
 
 import os
-from reportlab.lib.pagesizes import A4
+
 from reportlab.lib import colors
-from reportlab.lib.units import cm, mm
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT, TA_JUSTIFY
-from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    HRFlowable, KeepTogether, PageBreak, Frame, PageTemplate
-)
-from reportlab.platypus.flowables import Flowable
+from reportlab.lib.units import cm, mm
 from reportlab.pdfgen import canvas as pdfcanvas
+from reportlab.platypus import (Frame, HRFlowable, KeepTogether, PageBreak,
+                                PageTemplate, Paragraph, SimpleDocTemplate,
+                                Spacer, Table, TableStyle)
+from reportlab.platypus.flowables import Flowable
 
 os.makedirs("logs", exist_ok=True)
 OUTPUT = "logs/Metrics_Reference.pdf"
@@ -25,75 +25,78 @@ W, H = A4  # 595.27 x 841.89 pts
 # PALETTE
 # ─────────────────────────────────────────────────────────────────────────────
 C = {
-    "navy":      colors.HexColor("#0D1B2A"),
-    "blue":      colors.HexColor("#1565C0"),
-    "blue_mid":  colors.HexColor("#1976D2"),
-    "blue_light":colors.HexColor("#E3F2FD"),
+    "navy": colors.HexColor("#0D1B2A"),
+    "blue": colors.HexColor("#1565C0"),
+    "blue_mid": colors.HexColor("#1976D2"),
+    "blue_light": colors.HexColor("#E3F2FD"),
     "blue_pale": colors.HexColor("#F5F9FF"),
-    "indigo":    colors.HexColor("#283593"),
-    "accent":    colors.HexColor("#0288D1"),
-    "teal":      colors.HexColor("#00838F"),
-    "green":     colors.HexColor("#2E7D32"),
-    "green_lt":  colors.HexColor("#E8F5E9"),
-    "amber":     colors.HexColor("#E65100"),
-    "amber_lt":  colors.HexColor("#FFF3E0"),
-    "red":       colors.HexColor("#B71C1C"),
-    "red_lt":    colors.HexColor("#FFEBEE"),
-    "gold":      colors.HexColor("#F57F17"),
-    "grey_d":    colors.HexColor("#212121"),
-    "grey_m":    colors.HexColor("#424242"),
-    "grey_l":    colors.HexColor("#757575"),
-    "grey_bd":   colors.HexColor("#CFD8DC"),
-    "grey_bg":   colors.HexColor("#F5F6FA"),
-    "white":     colors.white,
-    "divider":   colors.HexColor("#B0BEC5"),
+    "indigo": colors.HexColor("#283593"),
+    "accent": colors.HexColor("#0288D1"),
+    "teal": colors.HexColor("#00838F"),
+    "green": colors.HexColor("#2E7D32"),
+    "green_lt": colors.HexColor("#E8F5E9"),
+    "amber": colors.HexColor("#E65100"),
+    "amber_lt": colors.HexColor("#FFF3E0"),
+    "red": colors.HexColor("#B71C1C"),
+    "red_lt": colors.HexColor("#FFEBEE"),
+    "gold": colors.HexColor("#F57F17"),
+    "grey_d": colors.HexColor("#212121"),
+    "grey_m": colors.HexColor("#424242"),
+    "grey_l": colors.HexColor("#757575"),
+    "grey_bd": colors.HexColor("#CFD8DC"),
+    "grey_bg": colors.HexColor("#F5F6FA"),
+    "white": colors.white,
+    "divider": colors.HexColor("#B0BEC5"),
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # STYLES
 # ─────────────────────────────────────────────────────────────────────────────
+
+
 def ps(name, **kw):
     return ParagraphStyle(name, **kw)
+
 
 ST = {
     "cover_main": ps("cm", fontSize=32, leading=40, fontName="Helvetica-Bold",
                      textColor=C["white"], alignment=TA_LEFT),
-    "cover_sub":  ps("cs", fontSize=14, leading=20, fontName="Helvetica",
-                     textColor=colors.HexColor("#90CAF9"), alignment=TA_LEFT),
-    "cover_tag":  ps("ct", fontSize=10, leading=14, fontName="Helvetica",
-                     textColor=colors.HexColor("#64B5F6"), alignment=TA_LEFT),
+    "cover_sub": ps("cs", fontSize=14, leading=20, fontName="Helvetica",
+                    textColor=colors.HexColor("#90CAF9"), alignment=TA_LEFT),
+    "cover_tag": ps("ct", fontSize=10, leading=14, fontName="Helvetica",
+                    textColor=colors.HexColor("#64B5F6"), alignment=TA_LEFT),
 
-    "sec_label":  ps("sl", fontSize=9, leading=12, fontName="Helvetica-Bold",
-                     textColor=C["accent"], spaceBefore=0, spaceAfter=0),
-    "sec_title":  ps("st", fontSize=18, leading=24, fontName="Helvetica-Bold",
-                     textColor=C["white"], spaceBefore=0, spaceAfter=0),
+    "sec_label": ps("sl", fontSize=9, leading=12, fontName="Helvetica-Bold",
+                    textColor=C["accent"], spaceBefore=0, spaceAfter=0),
+    "sec_title": ps("st", fontSize=18, leading=24, fontName="Helvetica-Bold",
+                    textColor=C["white"], spaceBefore=0, spaceAfter=0),
 
-    "metric_h":   ps("mh", fontSize=13, leading=18, fontName="Helvetica-Bold",
-                     textColor=C["navy"]),
-    "badge":      ps("ba", fontSize=8, leading=10, fontName="Helvetica-Bold",
-                     textColor=C["white"], alignment=TA_CENTER),
-    "col_lbl":    ps("cl", fontSize=8, leading=10, fontName="Helvetica-Bold",
-                     textColor=C["accent"], spaceBefore=6, spaceAfter=2),
-    "body":       ps("bo", fontSize=9.5, leading=15, fontName="Helvetica",
-                     textColor=C["grey_m"], alignment=TA_JUSTIFY),
-    "formula_h":  ps("fh", fontSize=8, leading=10, fontName="Helvetica-Bold",
-                     textColor=C["white"]),
-    "formula_b":  ps("fb", fontSize=9.5, leading=14, fontName="Courier",
-                     textColor=colors.HexColor("#E0F7FA")),
-    "interp_h":   ps("ih", fontSize=8, leading=10, fontName="Helvetica-Bold",
-                     textColor=C["green"]),
-    "interp_b":   ps("ib", fontSize=9, leading=13, fontName="Helvetica",
-                     textColor=C["grey_m"]),
-    "note":       ps("no", fontSize=8.5, leading=12, fontName="Helvetica-Oblique",
-                     textColor=C["grey_l"]),
-    "tbl_hdr":    ps("th", fontSize=9, leading=12, fontName="Helvetica-Bold",
-                     textColor=C["white"]),
-    "tbl_cell":   ps("tc", fontSize=9, leading=13, fontName="Helvetica",
-                     textColor=C["grey_m"]),
-    "footer":     ps("fo", fontSize=7.5, leading=10, fontName="Helvetica",
-                     textColor=C["grey_l"], alignment=TA_CENTER),
-    "pg_hdr":     ps("ph", fontSize=8, leading=10, fontName="Helvetica-Bold",
-                     textColor=C["grey_l"]),
+    "metric_h": ps("mh", fontSize=13, leading=18, fontName="Helvetica-Bold",
+                   textColor=C["navy"]),
+    "badge": ps("ba", fontSize=8, leading=10, fontName="Helvetica-Bold",
+                textColor=C["white"], alignment=TA_CENTER),
+    "col_lbl": ps("cl", fontSize=8, leading=10, fontName="Helvetica-Bold",
+                  textColor=C["accent"], spaceBefore=6, spaceAfter=2),
+    "body": ps("bo", fontSize=9.5, leading=15, fontName="Helvetica",
+               textColor=C["grey_m"], alignment=TA_JUSTIFY),
+    "formula_h": ps("fh", fontSize=8, leading=10, fontName="Helvetica-Bold",
+                    textColor=C["white"]),
+    "formula_b": ps("fb", fontSize=9.5, leading=14, fontName="Courier",
+                    textColor=colors.HexColor("#E0F7FA")),
+    "interp_h": ps("ih", fontSize=8, leading=10, fontName="Helvetica-Bold",
+                   textColor=C["green"]),
+    "interp_b": ps("ib", fontSize=9, leading=13, fontName="Helvetica",
+                   textColor=C["grey_m"]),
+    "note": ps("no", fontSize=8.5, leading=12, fontName="Helvetica-Oblique",
+               textColor=C["grey_l"]),
+    "tbl_hdr": ps("th", fontSize=9, leading=12, fontName="Helvetica-Bold",
+                  textColor=C["white"]),
+    "tbl_cell": ps("tc", fontSize=9, leading=13, fontName="Helvetica",
+                   textColor=C["grey_m"]),
+    "footer": ps("fo", fontSize=7.5, leading=10, fontName="Helvetica",
+                 textColor=C["grey_l"], alignment=TA_CENTER),
+    "pg_hdr": ps("ph", fontSize=8, leading=10, fontName="Helvetica-Bold",
+                 textColor=C["grey_l"]),
     "overview_h": ps("oh", fontSize=11, leading=15, fontName="Helvetica-Bold",
                      textColor=C["navy"], spaceBefore=12, spaceAfter=6),
 }
@@ -103,6 +106,8 @@ PAGE_W = 17 * cm   # usable width
 # ─────────────────────────────────────────────────────────────────────────────
 # RUNNING HEADER / FOOTER (canvas callbacks)
 # ─────────────────────────────────────────────────────────────────────────────
+
+
 class DocCanvas:
     def __init__(self, doc):
         self.doc = doc
@@ -116,18 +121,23 @@ class DocCanvas:
         # Top rule
         canv.setStrokeColor(C["blue_mid"])
         canv.setLineWidth(0.8)
-        canv.line(2*cm, H - 1.5*cm, W - 2*cm, H - 1.5*cm)
+        canv.line(2 * cm, H - 1.5 * cm, W - 2 * cm, H - 1.5 * cm)
 
         # Header text
         canv.setFont("Helvetica-Bold", 7.5)
         canv.setFillColor(C["grey_l"])
-        canv.drawString(2*cm, H - 1.3*cm, "College Chatbot  ·  Metrics Reference Guide")
-        canv.drawRightString(W - 2*cm, H - 1.3*cm, f"Page {pg}")
+        canv.drawString(
+            2 * cm,
+            H - 1.3 * cm,
+            "College Chatbot  ·  Metrics Reference Guide")
+        canv.drawRightString(W - 2 * cm, H - 1.3 * cm, f"Page {pg}")
 
         # Bottom rule
-        canv.line(2*cm, 1.3*cm, W - 2*cm, 1.3*cm)
+        canv.line(2 * cm, 1.3 * cm, W - 2 * cm, 1.3 * cm)
         canv.setFont("Helvetica", 7)
-        canv.drawCentredString(W/2, 0.9*cm,
+        canv.drawCentredString(
+            W / 2,
+            0.9 * cm,
             "ACP Project  ·  Generated by tools/generate_metrics_pdf.py  ·  2026")
         canv.restoreState()
 
@@ -146,45 +156,45 @@ def draw_cover(canv, doc):
     canv.setFillColor(colors.HexColor("#112233"))
     from reportlab.graphics.shapes import Polygon
     p = canv.beginPath()
-    p.moveTo(W*0.55, H)
+    p.moveTo(W * 0.55, H)
     p.lineTo(W, H)
-    p.lineTo(W, H*0.55)
+    p.lineTo(W, H * 0.55)
     p.close()
     canv.drawPath(p, fill=1, stroke=0)
 
     # Accent bar (left edge)
     canv.setFillColor(C["accent"])
-    canv.rect(0, 0, 0.5*cm, H, fill=1, stroke=0)
+    canv.rect(0, 0, 0.5 * cm, H, fill=1, stroke=0)
 
     # Accent horizontal band
     canv.setFillColor(colors.HexColor("#0A2744"))
-    canv.rect(0, H*0.25, W, H*0.08, fill=1, stroke=0)
+    canv.rect(0, H * 0.25, W, H * 0.08, fill=1, stroke=0)
 
     # College Chatbot tag
     canv.setFont("Helvetica-Bold", 10)
     canv.setFillColor(C["accent"])
-    canv.drawString(2.2*cm, H*0.85, "COLLEGE CHATBOT  ·  ACP PROJECT")
+    canv.drawString(2.2 * cm, H * 0.85, "COLLEGE CHATBOT  ·  ACP PROJECT")
 
     # Main title
     canv.setFont("Helvetica-Bold", 38)
     canv.setFillColor(C["white"])
-    canv.drawString(2.2*cm, H*0.72, "Metrics")
-    canv.drawString(2.2*cm, H*0.64, "Reference")
+    canv.drawString(2.2 * cm, H * 0.72, "Metrics")
+    canv.drawString(2.2 * cm, H * 0.64, "Reference")
 
     # Accent colour word
     canv.setFillColor(C["accent"])
-    canv.drawString(2.2*cm, H*0.56, "Guide")
+    canv.drawString(2.2 * cm, H * 0.56, "Guide")
 
     # Subtitle
     canv.setFont("Helvetica", 13)
     canv.setFillColor(colors.HexColor("#90CAF9"))
-    canv.drawString(2.2*cm, H*0.49,
-        "A plain-English guide to every metric in the log sheets")
+    canv.drawString(2.2 * cm, H * 0.49,
+                    "A plain-English guide to every metric in the log sheets")
 
     # Divider line
     canv.setStrokeColor(C["accent"])
     canv.setLineWidth(1.5)
-    canv.line(2.2*cm, H*0.46, 14*cm, H*0.46)
+    canv.line(2.2 * cm, H * 0.46, 14 * cm, H * 0.46)
 
     # Metric pill labels
     pills = [
@@ -195,8 +205,8 @@ def draw_cover(canv, doc):
         ("BERTSCORE", C["indigo"]),
         ("ACCURACY", C["blue"]),
     ]
-    x = 2.2*cm
-    y = H*0.40
+    x = 2.2 * cm
+    y = H * 0.40
     canv.setFont("Helvetica-Bold", 8)
     for label, col in pills:
         tw = canv.stringWidth(label, "Helvetica-Bold", 8)
@@ -210,14 +220,18 @@ def draw_cover(canv, doc):
     # Version / date
     canv.setFont("Helvetica", 9)
     canv.setFillColor(colors.HexColor("#546E7A"))
-    canv.drawString(2.2*cm, H*0.33, "Version 2.0   ·   March 2026")
+    canv.drawString(2.2 * cm, H * 0.33, "Version 2.0   ·   March 2026")
 
     # Bottom strip
     canv.setFillColor(C["blue"])
-    canv.rect(0, 0, W, 1.6*cm, fill=1, stroke=0)
+    canv.rect(0, 0, W, 1.6 * cm, fill=1, stroke=0)
     canv.setFont("Helvetica", 8)
     canv.setFillColor(C["white"])
-    canv.drawCentredString(W/2, 0.55*cm,
+    canv.drawCentredString(
+        W /
+        2,
+        0.55 *
+        cm,
         "College Chatbot  ·  Evaluation Metrics Documentation  ·  ACP Project 2026")
 
     canv.restoreState()
@@ -231,21 +245,26 @@ def section_divider(number, title, subtitle=""):
     if subtitle:
         rows.append([Paragraph(f"SECTION {number}", ST["sec_label"]), ""])
         rows.append([Paragraph(title, ST["sec_title"]), ""])
-        rows.append([Paragraph(subtitle, ps("subsub", fontSize=9, leading=13,
-                     fontName="Helvetica", textColor=colors.HexColor("#90CAF9"))), ""])
+        rows.append([Paragraph(subtitle,
+                               ps("subsub",
+                                  fontSize=9,
+                                  leading=13,
+                                  fontName="Helvetica",
+                                  textColor=colors.HexColor("#90CAF9"))),
+                     ""])
     else:
         rows.append([Paragraph(f"SECTION {number}", ST["sec_label"]), ""])
         rows.append([Paragraph(title, ST["sec_title"]), ""])
 
-    t = Table(rows, colWidths=[PAGE_W - 1.5*cm, 1.5*cm])
+    t = Table(rows, colWidths=[PAGE_W - 1.5 * cm, 1.5 * cm])
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["navy"]),
-        ("TOPPADDING",    (0,0), (-1,-1), 6),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-        ("LEFTPADDING",   (0,0), (-1,-1), 16),
-        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
+        ("BACKGROUND", (0, 0), (-1, -1), C["navy"]),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 16),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
         # Left accent bar via inner table border
-        ("LINEBEFORE",    (0,0), (0,-1),  4, C["accent"]),
+        ("LINEBEFORE", (0, 0), (0, -1), 4, C["accent"]),
     ]))
     return [Spacer(1, 10), t, Spacer(1, 6)]
 
@@ -259,14 +278,14 @@ def formula_box(lines):
         rows.append([Paragraph(line if line else " ", ST["formula_b"])])
     t = Table(rows, colWidths=[PAGE_W])
     t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0),  (-1,-1), C["navy"]),
-        ("BACKGROUND",    (0,0),  (-1, 0), C["blue"]),
-        ("TOPPADDING",    (0,0),  (-1,-1), 5),
-        ("BOTTOMPADDING", (0,0),  (-1,-1), 5),
-        ("LEFTPADDING",   (0,0),  (-1,-1), 12),
-        ("RIGHTPADDING",  (0,0),  (-1,-1), 12),
-        ("LINEABOVE",     (0,0),  (-1, 0), 0, C["blue"]),
-        ("ROWBACKGROUNDS",(0,1),  (-1,-1), [C["navy"], colors.HexColor("#0A1929")]),
+        ("BACKGROUND", (0, 0), (-1, -1), C["navy"]),
+        ("BACKGROUND", (0, 0), (-1, 0), C["blue"]),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("LINEABOVE", (0, 0), (-1, 0), 0, C["blue"]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [C["navy"], colors.HexColor("#0A1929")]),
     ]))
     return t
 
@@ -290,21 +309,21 @@ def score_bands(bands):
         ])
         row_bgs.append(C["grey_bg"])
 
-    t = Table(rows, colWidths=[3.5*cm, PAGE_W - 3.5*cm])
+    t = Table(rows, colWidths=[3.5 * cm, PAGE_W - 3.5 * cm])
     style = [
-        ("BACKGROUND",    (0,0), (-1, 0), C["grey_bg"]),
-        ("TOPPADDING",    (0,0), (-1,-1), 5),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 5),
-        ("LEFTPADDING",   (0,0), (-1,-1), 10),
-        ("RIGHTPADDING",  (0,0), (-1,-1), 10),
-        ("GRID",          (0,0), (-1,-1), 0.3, C["divider"]),
-        ("ROWBACKGROUNDS",(0,1), (-1,-1), [C["white"], C["grey_bg"]]),
-        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+        ("BACKGROUND", (0, 0), (-1, 0), C["grey_bg"]),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.3, C["divider"]),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [C["white"], C["grey_bg"]]),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]
     # Colour the left cell per band
     for i, (_, _, ckey) in enumerate(bands, start=1):
         style.append(("BACKGROUND", (0, i), (0, i), C[ckey + "_lt"]
-                       if ckey + "_lt" in C else C["blue_light"]))
+                      if ckey + "_lt" in C else C["blue_light"]))
     t.setStyle(TableStyle(style))
     return t
 
@@ -322,19 +341,19 @@ def metric_card(title, sheet_tag, accent_color,
         Paragraph(sheet_tag, ps("sh", fontSize=8, fontName="Helvetica-Bold",
                                 textColor=C["white"], alignment=TA_RIGHT)),
     ]]
-    hdr = Table(hdr_data, colWidths=[PAGE_W - 3*cm, 3*cm])
+    hdr = Table(hdr_data, colWidths=[PAGE_W - 3 * cm, 3 * cm])
     hdr.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["white"]),
-        ("BACKGROUND",    (1,0), (1, 0),  accent_color),
-        ("TOPPADDING",    (0,0), (-1,-1), 10),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 10),
-        ("LEFTPADDING",   (0,0), (0, 0),  14),
-        ("RIGHTPADDING",  (1,0), (1, 0),  10),
-        ("LEFTPADDING",   (1,0), (1, 0),  6),
-        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+        ("BACKGROUND", (0, 0), (-1, -1), C["white"]),
+        ("BACKGROUND", (1, 0), (1, 0), accent_color),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LEFTPADDING", (0, 0), (0, 0), 14),
+        ("RIGHTPADDING", (1, 0), (1, 0), 10),
+        ("LEFTPADDING", (1, 0), (1, 0), 6),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
 
-    # ── What it measures ──────────────────────────────────────────────────────
+    # ── What it measures ────────────────────────────────────────────────────
     what_data = [[
         Paragraph("WHAT IT MEASURES", ST["col_lbl"]),
     ], [
@@ -342,14 +361,14 @@ def metric_card(title, sheet_tag, accent_color,
     ]]
     what_t = Table(what_data, colWidths=[PAGE_W])
     what_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["blue_pale"]),
-        ("TOPPADDING",    (0,0), (-1,-1), 6),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-        ("LEFTPADDING",   (0,0), (-1,-1), 14),
-        ("RIGHTPADDING",  (0,0), (-1,-1), 14),
+        ("BACKGROUND", (0, 0), (-1, -1), C["blue_pale"]),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
     ]))
 
-    # ── How it works ──────────────────────────────────────────────────────────
+    # ── How it works ────────────────────────────────────────────────────────
     how_data = [[
         Paragraph("HOW IT WORKS", ST["col_lbl"]),
     ], [
@@ -357,21 +376,21 @@ def metric_card(title, sheet_tag, accent_color,
     ]]
     how_t = Table(how_data, colWidths=[PAGE_W])
     how_t.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["white"]),
-        ("TOPPADDING",    (0,0), (-1,-1), 6),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-        ("LEFTPADDING",   (0,0), (-1,-1), 14),
-        ("RIGHTPADDING",  (0,0), (-1,-1), 14),
+        ("BACKGROUND", (0, 0), (-1, -1), C["white"]),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
     ]))
 
-    # ── Score bands ───────────────────────────────────────────────────────────
+    # ── Score bands ─────────────────────────────────────────────────────────
     interp_lbl = Table([[Paragraph("HOW TO READ THE RESULT", ST["col_lbl"])]],
                        colWidths=[PAGE_W])
     interp_lbl.setStyle(TableStyle([
-        ("BACKGROUND",    (0,0), (-1,-1), C["grey_bg"]),
-        ("TOPPADDING",    (0,0), (-1,-1), 6),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 2),
-        ("LEFTPADDING",   (0,0), (-1,-1), 14),
+        ("BACKGROUND", (0, 0), (-1, -1), C["grey_bg"]),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
     ]))
 
     # ── Note ─────────────────────────────────────────────────────────────────
@@ -380,12 +399,12 @@ def metric_card(title, sheet_tag, accent_color,
         note_t = Table([[Paragraph(f"ℹ  {note}", ST["note"])]],
                        colWidths=[PAGE_W])
         note_t.setStyle(TableStyle([
-            ("BACKGROUND",    (0,0), (-1,-1), C["amber_lt"]),
-            ("TOPPADDING",    (0,0), (-1,-1), 6),
-            ("BOTTOMPADDING", (0,0), (-1,-1), 6),
-            ("LEFTPADDING",   (0,0), (-1,-1), 14),
-            ("RIGHTPADDING",  (0,0), (-1,-1), 14),
-            ("LINEBEFORE",    (0,0), (0,-1),  3, C["gold"]),
+            ("BACKGROUND", (0, 0), (-1, -1), C["amber_lt"]),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("LEFTPADDING", (0, 0), (-1, -1), 14),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+            ("LINEBEFORE", (0, 0), (0, -1), 3, C["gold"]),
         ]))
         note_rows = [note_t]
 
@@ -395,12 +414,12 @@ def metric_card(title, sheet_tag, accent_color,
 
     outer = Table([[item] for item in inner], colWidths=[PAGE_W])
     outer.setStyle(TableStyle([
-        ("BOX",           (0,0), (-1,-1), 0.8, C["divider"]),
-        ("LINEBEFORE",    (0,0), (-1,-1), 4,   accent_color),
-        ("TOPPADDING",    (0,0), (-1,-1), 0),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 0),
-        ("LEFTPADDING",   (0,0), (-1,-1), 0),
-        ("RIGHTPADDING",  (0,0), (-1,-1), 0),
+        ("BOX", (0, 0), (-1, -1), 0.8, C["divider"]),
+        ("LINEBEFORE", (0, 0), (-1, -1), 4, accent_color),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
     ]))
 
     elems.append(KeepTogether([Spacer(1, 10), outer]))
@@ -413,17 +432,18 @@ def metric_card(title, sheet_tag, accent_color,
 dc = DocCanvas(None)
 doc = SimpleDocTemplate(
     OUTPUT, pagesize=A4,
-    leftMargin=2*cm, rightMargin=2*cm,
-    topMargin=2.2*cm, bottomMargin=2*cm,
+    leftMargin=2 * cm, rightMargin=2 * cm,
+    topMargin=2.2 * cm, bottomMargin=2 * cm,
 )
 
 story = []
 
 # ── COVER (entirely drawn by onFirstPage canvas callback) ────────────────────
 # No story items needed for page 1 — the canvas callback fills the whole page.
-story.append(PageBreak())  # forces page 1 content (the cover) to end immediately
+# forces page 1 content (the cover) to end immediately
+story.append(PageBreak())
 
-# ── PAGE-WIDE INTRO ───────────────────────────────────────────────────────────
+# ── PAGE-WIDE INTRO ─────────────────────────────────────────────────────
 story.append(Paragraph("Overview — All Metrics", ST["overview_h"]))
 story.append(Paragraph(
     "This document explains every metric recorded by the College Chatbot "
@@ -437,34 +457,34 @@ story.append(Paragraph(
 ov = [
     [Paragraph(h, ST["tbl_hdr"]) for h in
      ["Metric", "Sheet", "Range", "One-line summary", "Weight in Accuracy"]],
-    ["Time Taken (s)",       "Production",  "0 – ∞ s",     "Pure server processing time",            "—"],
-    ["Latency (s)",          "Evaluation",  "0 – ∞ s",     "Total client round-trip time",            "—"],
-    ["Server Time (s)",      "Evaluation",  "0 – ∞ s",     "Server time echoed in API response",      "—"],
-    ["Retrieval Conf. %",    "Both",        "0 – 100 %",   "Semantic match: query vs top chunk",      "—"],
-    ["Faithfulness %",       "Evaluation",  "0 – 100 %",   "Are claims grounded in the context?",     "30 %"],
-    ["Relevance %",          "Evaluation",  "0 – 100 %",   "Does the answer address the question?",   "25 %"],
-    ["Completeness %",       "Evaluation",  "0 – 100 %",   "All parts of the question answered?",     "20 %"],
-    ["BERTScore F1 %",       "Evaluation",  "0 – 100 %",   "Semantic overlap: answer vs context",     "15 %"],
-    ["Link Validity",        "Evaluation",  "X/Y Valid",   "Are hyperlinks in the answer live?",      "—"],
-    ["Accuracy %",           "Evaluation",  "0 – 100 %",   "Weighted final quality score",            "Final"],
-    ["Source",               "Both",        "Text label",  "Which system answered: RAG / SQL / KB",   "10 % (routing)"],
+    ["Time Taken (s)", "Production", "0 – ∞ s", "Pure server processing time", "—"],
+    ["Latency (s)", "Evaluation", "0 – ∞ s", "Total client round-trip time", "—"],
+    ["Server Time (s)", "Evaluation", "0 – ∞ s", "Server time echoed in API response", "—"],
+    ["Retrieval Conf. %", "Both", "0 – 100 %", "Semantic match: query vs top chunk", "—"],
+    ["Faithfulness %", "Evaluation", "0 – 100 %", "Are claims grounded in the context?", "30 %"],
+    ["Relevance %", "Evaluation", "0 – 100 %", "Does the answer address the question?", "25 %"],
+    ["Completeness %", "Evaluation", "0 – 100 %", "All parts of the question answered?", "20 %"],
+    ["BERTScore F1 %", "Evaluation", "0 – 100 %", "Semantic overlap: answer vs context", "15 %"],
+    ["Link Validity", "Evaluation", "X/Y Valid", "Are hyperlinks in the answer live?", "—"],
+    ["Accuracy %", "Evaluation", "0 – 100 %", "Weighted final quality score", "Final"],
+    ["Source", "Both", "Text label", "Which system answered: RAG / SQL / KB", "10 % (routing)"],
 ]
-ov_t = Table(ov, colWidths=[3.8*cm, 2.4*cm, 2.2*cm, 5.8*cm, 2.8*cm])
+ov_t = Table(ov, colWidths=[3.8 * cm, 2.4 * cm, 2.2 * cm, 5.8 * cm, 2.8 * cm])
 ov_t.setStyle(TableStyle([
-    ("BACKGROUND",    (0, 0), (-1,  0), C["navy"]),
-    ("TEXTCOLOR",     (0, 0), (-1,  0), C["white"]),
-    ("FONTNAME",      (0, 0), (-1, -1), "Helvetica"),
-    ("FONTSIZE",      (0, 0), (-1, -1), 8.5),
-    ("ROWBACKGROUNDS",(0, 1), (-1, -1), [C["white"], C["blue_pale"]]),
-    ("GRID",          (0, 0), (-1, -1), 0.3, C["divider"]),
-    ("TOPPADDING",    (0, 0), (-1, -1), 5),
+    ("BACKGROUND", (0, 0), (-1, 0), C["navy"]),
+    ("TEXTCOLOR", (0, 0), (-1, 0), C["white"]),
+    ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+    ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+    ("ROWBACKGROUNDS", (0, 1), (-1, -1), [C["white"], C["blue_pale"]]),
+    ("GRID", (0, 0), (-1, -1), 0.3, C["divider"]),
+    ("TOPPADDING", (0, 0), (-1, -1), 5),
     ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ("LEFTPADDING",   (0, 0), (-1, -1), 8),
-    ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
-    ("ALIGN",         (4, 0), (4, -1),  "CENTER"),
-    ("ALIGN",         (1, 0), (1, -1),  "CENTER"),
-    ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-    ("LINEBEFORE",    (0, 0), (0, -1),  3, C["accent"]),
+    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ("ALIGN", (4, 0), (4, -1), "CENTER"),
+    ("ALIGN", (1, 0), (1, -1), "CENTER"),
+    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ("LINEBEFORE", (0, 0), (0, -1), 3, C["accent"]),
 ]))
 story.append(ov_t)
 
@@ -473,7 +493,7 @@ story.append(ov_t)
 # SECTION 1 — TIMING
 # ══════════════════════════════════════════════════════════════════════════════
 story += section_divider(1, "Timing Metrics",
-    "How long did the system take to respond?")
+                         "How long did the system take to respond?")
 
 story += metric_card(
     title="Time Taken (s)",
@@ -497,10 +517,10 @@ story += metric_card(
         "Production sheet with 4 decimal place precision."
     ),
     bands=[
-        ("0 – 1 s",   "Excellent — SQL / Knowledge Base instant response",   "green"),
-        ("1 – 4 s",   "Good — RAG with fast GPU / cached model",              "teal"),
-        ("4 – 10 s",  "Acceptable — normal LLM inference on CPU",             "amber"),
-        ("> 10 s",    "Slow — model may be overloaded or cold-starting",       "red"),
+        ("0 – 1 s", "Excellent — SQL / Knowledge Base instant response", "green"),
+        ("1 – 4 s", "Good — RAG with fast GPU / cached model", "teal"),
+        ("4 – 10 s", "Acceptable — normal LLM inference on CPU", "amber"),
+        ("> 10 s", "Slow — model may be overloaded or cold-starting", "red"),
     ],
     note="Time Taken does NOT include network latency or client rendering time.",
 )
@@ -528,10 +548,10 @@ story += metric_card(
         "which on localhost is typically < 10 ms."
     ),
     bands=[
-        ("≈ Server Time", "Network overhead negligible — local / fast LAN",  "green"),
-        ("+ 50–200 ms",   "Small network gap — normal on local machine",       "teal"),
-        ("+ 0.5 – 2 s",   "Noticeable delay — check network or proxy",         "amber"),
-        ("> Server + 2 s","Large gap — network bottleneck or buffering issue",  "red"),
+        ("≈ Server Time", "Network overhead negligible — local / fast LAN", "green"),
+        ("+ 50–200 ms", "Small network gap — normal on local machine", "teal"),
+        ("+ 0.5 – 2 s", "Noticeable delay — check network or proxy", "amber"),
+        ("> Server + 2 s", "Large gap — network bottleneck or buffering issue", "red"),
     ],
 )
 
@@ -558,10 +578,10 @@ story += metric_card(
         "you the authoritative server number without any client-side noise."
     ),
     bands=[
-        ("≈ Latency",    "Network is fast — values will be nearly identical",  "green"),
-        ("Much < Latency","Network delay is significant; focus on Server Time", "teal"),
-        ("Much > Latency","This should not happen — check for clock skew",      "red"),
-        ("N/A",           "Response did not include time_taken field",          "amber"),
+        ("≈ Latency", "Network is fast — values will be nearly identical", "green"),
+        ("Much < Latency", "Network delay is significant; focus on Server Time", "teal"),
+        ("Much > Latency", "This should not happen — check for clock skew", "red"),
+        ("N/A", "Response did not include time_taken field", "amber"),
     ],
 )
 
@@ -571,7 +591,7 @@ story += metric_card(
 # ══════════════════════════════════════════════════════════════════════════════
 story.append(PageBreak())
 story += section_divider(2, "Retrieval Quality Metrics",
-    "Did the system find the right information?")
+                         "Did the system find the right information?")
 
 story += metric_card(
     title="Retrieval Confidence (%)",
@@ -605,10 +625,10 @@ story += metric_card(
         "and stored as Retrieval Confidence."
     ),
     bands=[
-        ("80 – 100 %", "Excellent — retriever found exactly the right content",  "green"),
-        ("60 – 79 %",  "Good — likely relevant, minor gaps possible",             "teal"),
-        ("40 – 59 %",  "Moderate — answer may contain hallucinated details",      "amber"),
-        ("< 40 %",     "Poor — retriever is guessing; treat answer with caution", "red"),
+        ("80 – 100 %", "Excellent — retriever found exactly the right content", "green"),
+        ("60 – 79 %", "Good — likely relevant, minor gaps possible", "teal"),
+        ("40 – 59 %", "Moderate — answer may contain hallucinated details", "amber"),
+        ("< 40 %", "Poor — retriever is guessing; treat answer with caution", "red"),
     ],
     note="SQL and Knowledge-Base answers show N/A — no vector retrieval is performed for structured data queries.",
 )
@@ -636,10 +656,10 @@ story += metric_card(
         "The routing decision is attached to every log row."
     ),
     bands=[
-        ("RAG",    "LLM-generated answer from retrieved document chunks",  "blue"),
-        ("SQL",    "Direct database lookup — high precision for numbers",  "teal"),
-        ("KB",     "Hardcoded facts — fastest and most reliable",          "green"),
-        ("Unknown","Router could not classify the query — review logs",    "red"),
+        ("RAG", "LLM-generated answer from retrieved document chunks", "blue"),
+        ("SQL", "Direct database lookup — high precision for numbers", "teal"),
+        ("KB", "Hardcoded facts — fastest and most reliable", "green"),
+        ("Unknown", "Router could not classify the query — review logs", "red"),
     ],
 )
 
@@ -649,7 +669,7 @@ story += metric_card(
 # ══════════════════════════════════════════════════════════════════════════════
 story.append(PageBreak())
 story += section_divider(3, "LLM-as-Judge Metrics",
-    "Scored by Gemma 1B using the question, context, and answer")
+                         "Scored by Gemma 1B using the question, context, and answer")
 
 # Judge intro box
 intro_t = Table([[Paragraph(
@@ -661,12 +681,12 @@ intro_t = Table([[Paragraph(
        textColor=C["navy"], alignment=TA_JUSTIFY)
 )]], colWidths=[PAGE_W])
 intro_t.setStyle(TableStyle([
-    ("BACKGROUND",   (0,0), (-1,-1), C["blue_light"]),
-    ("TOPPADDING",   (0,0), (-1,-1), 10),
-    ("BOTTOMPADDING",(0,0), (-1,-1), 10),
-    ("LEFTPADDING",  (0,0), (-1,-1), 14),
-    ("RIGHTPADDING", (0,0), (-1,-1), 14),
-    ("LINEBEFORE",   (0,0), (0,-1),  4, C["blue"]),
+    ("BACKGROUND", (0, 0), (-1, -1), C["blue_light"]),
+    ("TOPPADDING", (0, 0), (-1, -1), 10),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+    ("LEFTPADDING", (0, 0), (-1, -1), 14),
+    ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+    ("LINEBEFORE", (0, 0), (0, -1), 4, C["blue"]),
 ]))
 story.append(Spacer(1, 8))
 story.append(intro_t)
@@ -700,10 +720,10 @@ story += metric_card(
         "every single claim has clear contextual support."
     ),
     bands=[
-        ("90 – 100 %", "Every statement grounded in source — highly reliable",  "green"),
-        ("70 – 89 %",  "Mostly faithful, minor unsupported details present",     "teal"),
-        ("50 – 69 %",  "Some hallucination — review the answer carefully",       "amber"),
-        ("< 50 %",     "Significant hallucination — retrieval may be wrong",     "red"),
+        ("90 – 100 %", "Every statement grounded in source — highly reliable", "green"),
+        ("70 – 89 %", "Mostly faithful, minor unsupported details present", "teal"),
+        ("50 – 69 %", "Some hallucination — review the answer carefully", "amber"),
+        ("< 50 %", "Significant hallucination — retrieval may be wrong", "red"),
     ],
 )
 
@@ -735,10 +755,10 @@ story += metric_card(
         "regardless of how accurate the fee information is."
     ),
     bands=[
-        ("90 – 100 %", "Laser-focused — exactly what the user asked for",        "green"),
-        ("70 – 89 %",  "Mostly on-topic with minor tangents",                     "teal"),
-        ("50 – 69 %",  "Partly relevant — answer drifts into unrelated info",     "amber"),
-        ("< 50 %",     "Bot answered the wrong question entirely",                "red"),
+        ("90 – 100 %", "Laser-focused — exactly what the user asked for", "green"),
+        ("70 – 89 %", "Mostly on-topic with minor tangents", "teal"),
+        ("50 – 69 %", "Partly relevant — answer drifts into unrelated info", "amber"),
+        ("< 50 %", "Bot answered the wrong question entirely", "red"),
     ],
 )
 
@@ -770,10 +790,10 @@ story += metric_card(
         "the total count scores around 0.3. All four aspects covered scores near 1.0."
     ),
     bands=[
-        ("90 – 100 %", "Comprehensive — all parts of the question answered",      "green"),
-        ("70 – 89 %",  "Mostly complete — one or two minor aspects missed",       "teal"),
-        ("50 – 69 %",  "Partial answer — significant parts unanswered",           "amber"),
-        ("< 50 %",     "Only a small fraction of the question was addressed",      "red"),
+        ("90 – 100 %", "Comprehensive — all parts of the question answered", "green"),
+        ("70 – 89 %", "Mostly complete — one or two minor aspects missed", "teal"),
+        ("50 – 69 %", "Partial answer — significant parts unanswered", "amber"),
+        ("< 50 %", "Only a small fraction of the question was addressed", "red"),
     ],
 )
 
@@ -783,7 +803,7 @@ story += metric_card(
 # ══════════════════════════════════════════════════════════════════════════════
 story.append(PageBreak())
 story += section_divider(4, "Statistical & Validity Metrics",
-    "Objective, formula-based checks that complement the LLM judge")
+                         "Objective, formula-based checks that complement the LLM judge")
 
 story += metric_card(
     title="BERTScore F1 %",
@@ -822,10 +842,10 @@ story += metric_card(
         "F1 balances both into a single number."
     ),
     bands=[
-        ("85 – 100 %", "Very strong overlap — answer closely mirrors the docs",   "green"),
-        ("70 – 84 %",  "Good match — some paraphrasing or minor omissions",       "teal"),
-        ("50 – 69 %",  "Moderate — answer uses very different language to docs",   "amber"),
-        ("< 50 %",     "Answer is semantically distant — possible hallucination",  "red"),
+        ("85 – 100 %", "Very strong overlap — answer closely mirrors the docs", "green"),
+        ("70 – 84 %", "Good match — some paraphrasing or minor omissions", "teal"),
+        ("50 – 69 %", "Moderate — answer uses very different language to docs", "amber"),
+        ("< 50 %", "Answer is semantically distant — possible hallucination", "red"),
     ],
     note="For SQL/KB answers where context is empty, this defaults to 100 % — evaluated by the LLM judge instead.",
 )
@@ -854,10 +874,10 @@ story += metric_card(
         "errors mark it as broken. Answers with no links show 'N/A'."
     ),
     bands=[
-        ("N/A",        "No hyperlinks in the answer — normal for SQL/KB answers", "teal"),
-        ("All Valid",  "All links live — references are up to date",               "green"),
-        ("Partial",    "Some links broken — update those pages in the knowledge base","amber"),
-        ("0/N Valid",  "All links broken — knowledge base may have stale URLs",    "red"),
+        ("N/A", "No hyperlinks in the answer — normal for SQL/KB answers", "teal"),
+        ("All Valid", "All links live — references are up to date", "green"),
+        ("Partial", "Some links broken — update those pages in the knowledge base", "amber"),
+        ("0/N Valid", "All links broken — knowledge base may have stale URLs", "red"),
     ],
 )
 
@@ -867,7 +887,7 @@ story += metric_card(
 # ══════════════════════════════════════════════════════════════════════════════
 story.append(PageBreak())
 story += section_divider(5, "Final Accuracy Score",
-    "One balanced number summarising overall response quality")
+                         "One balanced number summarising overall response quality")
 
 story += metric_card(
     title="Accuracy %",
@@ -903,11 +923,11 @@ story += metric_card(
         "handled the query — e.g., SQL for 'list all students', RAG for policies."
     ),
     bands=[
-        ("90 – 100 %", "Excellent — accurate, complete, grounded, on-topic",      "green"),
-        ("75 – 89 %",  "Good quality — suitable for real-user deployment",         "teal"),
-        ("60 – 74 %",  "Acceptable — some improvements needed",                    "amber"),
-        ("40 – 59 %",  "Poor — investigate retrieval failures or prompt design",   "amber"),
-        ("< 40 %",     "Problematic — likely hallucinating or mis-routing",        "red"),
+        ("90 – 100 %", "Excellent — accurate, complete, grounded, on-topic", "green"),
+        ("75 – 89 %", "Good quality — suitable for real-user deployment", "teal"),
+        ("60 – 74 %", "Acceptable — some improvements needed", "amber"),
+        ("40 – 59 %", "Poor — investigate retrieval failures or prompt design", "amber"),
+        ("< 40 %", "Problematic — likely hallucinating or mis-routing", "red"),
     ],
     note="Weights can be adjusted in prompt_test.py to reflect your team's priorities.",
 )
@@ -915,34 +935,34 @@ story += metric_card(
 # Weight table
 story.append(Spacer(1, 10))
 story.append(Paragraph("<b>Weight Breakdown</b>",
-    ps("wb_h", fontSize=10, fontName="Helvetica-Bold",
-       textColor=C["navy"], spaceBefore=4, spaceAfter=6)))
+                       ps("wb_h", fontSize=10, fontName="Helvetica-Bold",
+                          textColor=C["navy"], spaceBefore=4, spaceAfter=6)))
 w_rows = [
     [Paragraph(h, ST["tbl_hdr"]) for h in ["Metric", "Weight", "Reason"]],
-    ["Faithfulness %",   "30 %", "Hallucination is the biggest risk in RAG systems"],
-    ["Relevance %",      "25 %", "Off-topic answers are useless even if accurate"],
-    ["Completeness %",   "20 %", "Partial answers leave students without key info"],
-    ["BERTScore F1 %",   "15 %", "Objective statistical check alongside LLM judge"],
-    ["Source Score",     "10 %", "Minor routing bonus — correct pipeline improves trust"],
+    ["Faithfulness %", "30 %", "Hallucination is the biggest risk in RAG systems"],
+    ["Relevance %", "25 %", "Off-topic answers are useless even if accurate"],
+    ["Completeness %", "20 %", "Partial answers leave students without key info"],
+    ["BERTScore F1 %", "15 %", "Objective statistical check alongside LLM judge"],
+    ["Source Score", "10 %", "Minor routing bonus — correct pipeline improves trust"],
     [Paragraph("<b>TOTAL</b>", ps("wt", fontSize=9, fontName="Helvetica-Bold",
                textColor=C["navy"])),
      Paragraph("<b>100 %</b>", ps("wp", fontSize=9, fontName="Helvetica-Bold",
                textColor=C["navy"])), ""],
 ]
-w_t = Table(w_rows, colWidths=[3.8*cm, 2*cm, 11.2*cm])
+w_t = Table(w_rows, colWidths=[3.8 * cm, 2 * cm, 11.2 * cm])
 w_t.setStyle(TableStyle([
-    ("BACKGROUND",    (0, 0), (-1,  0), C["navy"]),
-    ("TEXTCOLOR",     (0, 0), (-1,  0), C["white"]),
-    ("BACKGROUND",    (0,-1), (-1, -1), C["blue_light"]),
-    ("FONTSIZE",      (0, 0), (-1, -1), 9),
-    ("FONTNAME",      (0, 1), (-1, -1), "Helvetica"),
-    ("ROWBACKGROUNDS",(0, 1), (-1, -2), [C["white"], C["grey_bg"]]),
-    ("GRID",          (0, 0), (-1, -1), 0.3, C["divider"]),
-    ("TOPPADDING",    (0, 0), (-1, -1), 6),
+    ("BACKGROUND", (0, 0), (-1, 0), C["navy"]),
+    ("TEXTCOLOR", (0, 0), (-1, 0), C["white"]),
+    ("BACKGROUND", (0, -1), (-1, -1), C["blue_light"]),
+    ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+    ("ROWBACKGROUNDS", (0, 1), (-1, -2), [C["white"], C["grey_bg"]]),
+    ("GRID", (0, 0), (-1, -1), 0.3, C["divider"]),
+    ("TOPPADDING", (0, 0), (-1, -1), 6),
     ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-    ("LEFTPADDING",   (0, 0), (-1, -1), 10),
-    ("ALIGN",         (1, 0), (1, -1),  "CENTER"),
-    ("LINEBEFORE",    (0, 0), (0, -1),  3, C["blue"]),
+    ("LEFTPADDING", (0, 0), (-1, -1), 10),
+    ("ALIGN", (1, 0), (1, -1), "CENTER"),
+    ("LINEBEFORE", (0, 0), (0, -1), 3, C["blue"]),
 ]))
 story.append(w_t)
 
@@ -955,6 +975,7 @@ def on_page(canv, doc):
         draw_cover(canv, doc)
     else:
         dc.on_page(canv, doc)
+
 
 doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
 print(f"\n✓  PDF generated → {OUTPUT}")
