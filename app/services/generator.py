@@ -42,9 +42,9 @@ class Generator:
                           f"Keep it under 2 sentences and very welcoming. Answer in English unless they spoke to you in another language."
             try:
                 if stream:
-                    return self._generate_stream(lite_prompt, "", "", "", temperature)
+                    return self._generate_stream(lite_prompt, "", "", temperature)
                 else:
-                    return self._generate_sync(lite_prompt, "", "", "", temperature)
+                    return self._generate_sync(lite_prompt, "", "", temperature)
             except Exception as e:
                 print(f"⚠ Greeting Fast-track error: {e}")
                 return self._yield_fallback("Hello! I'm your TKRCET College Buddy. How can I help you today?") if stream else "Hello! I'm your TKRCET College Buddy. How can I help you today?"
@@ -125,65 +125,104 @@ Answer:"""
                 return self._generate_stream(prompt, quick_links_section, context, temperature, num_predict)
             else:
                 return self._generate_sync(prompt, quick_links_section, context, temperature, num_predict)
+        except requests.exceptions.ConnectionError:
+            error_msg = "✗ Connection Error: Ollama is not running at 127.0.0.1:11434. Please start it with 'ollama serve'."
+            print(f"⚠ {error_msg}")
+            return quick_links_section + f"⚠ {error_msg}\n\nRaw Context:\n{context}"
         except Exception as e:
             print(f"⚠ Ollama error: {e}")
-            fallback = quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}"
+            fallback = quick_links_section + f"⚠ I couldn't generate a full response right now. Error: {str(e)}\n\nRaw context:\n\n{context}"
             return self._yield_fallback(fallback) if stream else fallback
 
     def _generate_sync(self, prompt, quick_links_section, context, temperature, num_predict=150):
         """Internal sync generation"""
-        response = requests.post(
-            self.ollama_url,
-            json={
-                "model": self.ollama_model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
-                    "temperature": temperature, 
-                    "num_ctx": 2048,
-                    "num_predict": num_predict
-                }
-            },
-            timeout=120
-        )
-        if response.status_code == 200:
-            answer = response.json().get('response', '').strip()
-            if answer:
-                return quick_links_section + answer
-        
-        return quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}"
+        try:
+            response = requests.post(
+                self.ollama_url,
+                json={
+                    "model": self.ollama_model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": float(temperature), 
+                        "num_ctx": 2048,
+                        "num_predict": num_predict
+                    }
+                },
+                timeout=120
+            )
+            if response.status_code == 200:
+                answer = response.json().get('response', '').strip()
+                if answer:
+                    return quick_links_section + answer
+            elif response.status_code == 404:
+                return quick_links_section + f"⚠ Model Not Found: The model '{self.ollama_model}' is not installed in Ollama. Please run 'ollama pull {self.ollama_model}'."
+            
+            # Extract detailed error from Ollama if available
+            err_detail = ""
+            try:
+                err_json = response.json()
+                if "error" in err_json:
+                    err_detail = f" Detail: {err_json['error']}"
+            except:
+                err_detail = f" Detail: {response.text[:100]}"
+                
+            return quick_links_section + f"⚠ Ollama returned an error (Status {response.status_code}).{err_detail}"
+        except requests.exceptions.ConnectionError:
+            return quick_links_section + "⚠ Connection Error: Could not reach Ollama. Is 'ollama serve' running?"
+        except Exception as e:
+            return quick_links_section + f"⚠ I couldn't generate a response. Error: {str(e)}\n\nContext: {context[:200]}..."
 
     def _generate_stream(self, prompt, quick_links_section, context, temperature, num_predict=150):
         """Internal stream generation"""
-        response = requests.post(
-            self.ollama_url,
-            json={
-                "model": self.ollama_model,
-                "prompt": prompt,
-                "stream": True,
-                "options": {
-                    "temperature": temperature, 
-                    "num_ctx": 2048,
-                    "num_predict": num_predict
-                }
-            },
-            timeout=120,
-            stream=True
-        )
-        
-        if quick_links_section:
-            yield quick_links_section
-        
-        for line in response.iter_lines():
-            if line:
+        try:
+            response = requests.post(
+                self.ollama_url,
+                json={
+                    "model": self.ollama_model,
+                    "prompt": prompt,
+                    "stream": True,
+                    "options": {
+                        "temperature": float(temperature), 
+                        "num_ctx": 2048,
+                        "num_predict": num_predict
+                    }
+                },
+                timeout=120,
+                stream=True
+            )
+            
+            if response.status_code == 404:
+                yield f"⚠ Model Not Found: The model '{self.ollama_model}' is not installed in Ollama. Please run 'ollama pull {self.ollama_model}'."
+                return
+            elif response.status_code != 200:
+                err_detail = ""
                 try:
-                    chunk_data = json.loads(line)
-                    if 'response' in chunk_data:
-                        yield chunk_data['response']
-                    if chunk_data.get('done', False):
-                        break
-                except json.JSONDecodeError:
-                    continue
+                    err_json = response.json()
+                    if "error" in err_json:
+                        err_detail = f" Detail: {err_json['error']}"
+                except:
+                    err_detail = f" Detail: {response.text[:100]}"
+                yield f"⚠ Ollama error (Status {response.status_code}).{err_detail}"
+                return
+
+            if quick_links_section:
+                yield quick_links_section
+            
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        chunk_data = json.loads(line)
+                        if 'response' in chunk_data:
+                            yield chunk_data['response']
+                        if chunk_data.get('done', False):
+                            break
+                    except json.JSONDecodeError:
+                        continue
+        except requests.exceptions.ConnectionError:
+            yield "⚠ Connection Error: Could not reach Ollama. Is 'ollama serve' running?"
+        except Exception as e:
+            yield f"⚠ Streaming error: {str(e)}"
 
     def _yield_fallback(self, fallback):
         yield fallback

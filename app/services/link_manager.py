@@ -28,6 +28,10 @@ class LinkManager:
         'alumni': {'title': 'Alumni', 'url': 'https://tkrcet.ac.in/alumni-sub-domain/'},
         'transport': {'title': 'About Campus', 'url': 'https://tkrcet.ac.in/about-the-campus/'},
         'mba': {'title': 'MBA Department', 'url': 'https://tkrcet.ac.in/mba/'},
+        'results': {'title': 'Student Login Portal (Results & Fee)', 'url': 'https://www.tkrcetautonomous.org/StudentLogin/MainStud.aspx'},
+        'sem fee': {'title': 'Student Login Portal (Results & Fee)', 'url': 'https://www.tkrcetautonomous.org/StudentLogin/MainStud.aspx'},
+        'supply fee': {'title': 'Student Login Portal (Results & Fee)', 'url': 'https://www.tkrcetautonomous.org/StudentLogin/MainStud.aspx'},
+        'exam fee': {'title': 'Student Login Portal (Results & Fee)', 'url': 'https://www.tkrcetautonomous.org/StudentLogin/MainStud.aspx'}
     }
 
     def get_topic_links(self, query):

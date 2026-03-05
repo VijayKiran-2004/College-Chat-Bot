@@ -78,10 +78,13 @@ async def lifespan(app: FastAPI):
             import threading
             def warmup():
                 try:
-                    query_router.rag_system.generator.generate(
+                    response = query_router.rag_system.generator.generate(
                         query="warmup", docs=[], kb_context="", links=[], is_greeting=True
                     )
-                    print("✓ Ollama model warmed up!")
+                    if isinstance(response, str) and "⚠" in response:
+                        print(f"⚠ Warmup failed: {response}")
+                    else:
+                        print("✓ Ollama model warmed up!")
                 except Exception as e:
                     print(f"⚠ Warmup failed: {e}")
             

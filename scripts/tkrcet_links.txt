@@ -116,6 +116,7 @@ https://tkrcet.ac.in/research-2/	Research & Innovation Cell (Alt)
 
 https://tkrcetexams.com/aboutus.php	About Exam Branch
 https://www.tkrcetautonomous.org/	Students Portal (Autonomous)
+https://www.tkrcetautonomous.org/StudentLogin/MainStud.aspx	Student Login Portal (Results & Fee Payment)
 https://tkrcetexams.com/rolllist.php	Students List
 https://tkrcetexams.com/internalmarks.php	Internal Marks
 https://tkrcet.ac.in/notifications/	Notifications

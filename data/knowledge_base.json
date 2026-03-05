@@ -98,8 +98,8 @@
         ]
     },
     "accreditation": {
-        "naac": "A+ Grade",
-        "nba": "NBA Accredited",
+        "NAAC": "A+ Grade",
+        "NBA": "NBA Accredited",
         "approvals": "AICTE approved, UGC recognized 2(f) & 12(B)"
     },
     "fees": {
@@ -114,5 +114,13 @@
         "annual_day": "Celebrated with cultural programs and award distributions.",
         "sports_meet": "Organized annually covering cricket, basketball, volleyball, athletics, etc.",
         "upcoming_events": "For information about upcoming events, please check the college website, notice boards, or contact the Student Activities Office."
+    },
+    "student_services": {
+        "bonafide_certificate": "To get a bonafide certificate: 1. Go to the reception in the main block entrance and take a Green Form (do not use the yellow form). 2. Fill out the details properly and select the 'Bonafide' option. 3. Pay 10 rupees at the reception (cash/online) to get it stamped. The form has 2 sections; the receptionist keeps 1, and you get the other back. 4. Submit your stamped green slip to your own branch's Department cell (e.g., CSE, IT, CSD, CSM, etc.). Your bonafide will be ready in 1 or 2 days.",
+        "fee_payment": "To pay the admission or tuition fee: 1. Go to the reception in the main block entrance and take the Yellow Form. 2. The form has 3 sections; fill out all details in all 3 sections correctly. 3. Give the form to the reception and pay the fee (in cash or online). 4. After it's stamped, the reception keeps 1 section, 1 section is given back to the student to keep, and 1 section must be submitted to the library.",
+        "transportation_fee": "To pay the transportation fee: 1. Go to the reception in the main block entrance and take the Green Form. 2. Fill out the details properly and select the 'Transportation' option. 3. Pay your fee in cash or online. 4. The green form has 2 sections; the receptionist will keep 1 section and give the stamped section back to you as your receipt.",
+        "hostel_fee": "To pay the hostel fee: 1. Go to the reception in the main block entrance and take the Green Form. 2. Fill out the details properly and select the 'Hostel Fee' option. 3. Pay your fee in cash or online. 4. The green form has 2 sections; the receptionist will keep 1 section and give the stamped section back to you as your receipt.",
+        "scholarship": "To apply / renew the scholarship, enter the main block, take left and go straight, and on your left, just after the stairs, we have the scholarship window. All the details and related docs on how to apply for the new scholarship and how to renew the scholarship will be mentioned on the noticeboard beside the scholarship window. If you have any furthermore queries, you can try asking the faculty there. Note: The scholarship faculty are not available during the lunch break and only available during college hours ONLY.",
+        "exam_fee_payment": "To pay the sem/supply fee only specific dates are available and these dates are only informed by the faculty to their respective students. If the student misses the allotted date range, an extra fine will be added to the fee, and if the fine period is also exceeded, the portal will be closed and the student must wait for the next notice. To pay the fee, only this portal is used: https://www.tkrcetautonomous.org/StudentLogin/MainStud.aspx"
     }
 }
