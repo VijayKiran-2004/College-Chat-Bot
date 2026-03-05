@@ -187,4 +187,3 @@ data/chunks/response_cache.json
 # Runtime logs (personal to each user, not for teammates)
 logs/response_log.xlsx
 logs/response_log_*.xlsx
-logs/Metrics_Reference.pdf

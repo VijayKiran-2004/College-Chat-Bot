@@ -15,74 +15,21 @@ print("Loading similarity model (all-MiniLM-L6-v2) for evaluation...")
 sim_model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # --------------------------------------------------------------
-# ALL YOUR PROMPTS
+# ALL YOUR PROMPTS (Loaded from JSON for scalability)
 # --------------------------------------------------------------
-test_prompts = [
-    "What is the attendance criteria?",
-    "What is the NAAC grade of the college?",
-    "Tell me placement statistics.",
-    "List all CSE students.",
-    "where the college is located?",
-    "How many students got placed in 2024?",
-    "What courses are offered in the College?",
-    "How to check the results?",
-    "what is the minimum attendance required?",
-    "Do college have any dress code or uniform",
-    "who got placed in savantis in 2024",
-    "What is the fee structure for MBA program?",
-    "Give me the list of students placed in 2023",
-    "who is topper of CSE department in 2024",
-    "how many cse students got placed in jbm group?",
-    "what is the female pass percentage in 2025?",
-    "who is head of library?",
-    "which companies visited for placements in 2024?",
-    "do college have hostel facilities?",
-    "tell me about the college infrastructure.",
-    "Do college have transport facilities?",
-    "what is the procedure to apply for scholarships?",
-    "do college provide training before drive?",
-    "who is head of placement cell?",
-    "what is the highest package offered in 2024?",
-    "who got highest package in 2025?",
-    "what is full name of college?",
-    "Do college have any sports facilities?",
-    "How to take admission in college hostel?",
-    "give me contact details of college hostel",
-    "in which route college bus is available?",
-    "what is sem fee for computer science engineering?",
-    "who is the principal of the college?",
-    "how to apply for supply exams?",
-    "what is the library timing?",
-    "how many books are there in college library?",
-    "do college have any research publications?",
-    "do college got any government projects sanctioned?",
-    "do college have an entrepreneurship cell?",
-    "do college provide internships to students?",
-    "what is fee structure for btech program?",
-    "how many departments are there in college?",
-    "do sem exams have revaluation facility?",
-    "what is the procedure to apply for revaluation?",
-    "tell me about college accreditation status?",
-    "is college affiliated to any university?",
-    "who is dean of Research and development?",
-    "Do college have wifi and lab facilities?",
-    "what is the procedure to apply for internships?",
-    "which company offered maximum packages in 2024?",
-    "what is the average package offered in 2024?",
-    "what percentage of female students got placed in 2025?",
-    "how many students placed in savantis?",
-    "how many CSD students got placed in kasmo in 2025?",
-    "what is the minimum CGPA required for placements?",
-    "do college allow students to sit for placements if they have backlogs?",
-    "how many students got internships in 2024?",
-    "do college have any international collaborations?",
-    "do college give attendance relaxation for sports events?",
-    "who is the head of computer science department?",
-    "do college have any cultural clubs?",
-    "any events organized by college in last year?",
-    "what is CGPA of student with roll number 21k91a0572?",
-    "do college organize any technical fests?"
-]
+PROMPTS_FILE = os.path.join(os.path.dirname(__file__), "all_prompts.json")
+
+if os.path.exists(PROMPTS_FILE):
+    with open(PROMPTS_FILE, 'r') as f:
+        test_prompts = json.load(f)
+    print(f"✓ Loaded {len(test_prompts)} prompts from {PROMPTS_FILE}")
+else:
+    print(f"⚠ {PROMPTS_FILE} not found! Using a minimal fallback list.")
+    test_prompts = [
+        "Who is the principal?",
+        "What is the attendance criteria?",
+        "List all CSE students."
+    ]
 
 # --------------------------------------------------------------
 # LLM-AS-JUDGE: Ask Gemma 1B to score the response

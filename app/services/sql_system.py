@@ -5,16 +5,18 @@ Handles natural language queries about student data
 import sqlite3
 import pandas as pd
 import re
+from pathlib import Path
 
 import os
 import requests
 import json
 
 class SQLSystem:
-    def __init__(self, db_path='app/database/students.db', ollama_model=None, ollama_url=None):
+    def __init__(self, db_path=None, ollama_model=None, ollama_url=None):
         """Initialize SQL system with student database"""
-        self.db_path = db_path
-        self.conn = sqlite3.connect(db_path, check_same_thread=False) # Helper for threading
+        project_root = Path(__file__).resolve().parent.parent.parent
+        self.db_path = db_path or str(project_root / 'app/database/students.db')
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         
         # Ollama Configuration
         self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'llama3.2:3b')

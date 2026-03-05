@@ -89,7 +89,7 @@ When a user sends a query, `ultra_rag.py`:
 2. **Sparse search** — BM25 finds top-K keyword-matching chunks
 3. **Merge & Deduplicate** — Results are combined and deduplicated
 4. **Cross-encoder Rerank** — `cross-encoder/ms-marco-MiniLM-L-6-v2` re-scores and sorts the merged results
-5. **Generation** — Top chunks are passed to Groq (`llama-3.1-8b-instant`) as context
+5. **Generation** — Top chunks are passed to **Ollama** (`llama3.2:3b`) as context to generate the final response.
 
 ---
 

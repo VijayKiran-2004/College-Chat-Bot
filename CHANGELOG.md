@@ -2,13 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.1] - March 2026
+
+### Fixed
+- **Documentation Accuracy**: Corrected `docs/vector_db.md` and `docs/rag.md` to accurately reference **Ollama (`llama3.2:3b`)** for RAG generation.
+- **Clarification**: Distinguished between the **Scraper pipeline** (which uses Groq `llama-3.1-8b-instant`) and the **RAG generation pipeline** (which uses local Ollama).
+
 ## [3.7.0] - March 2026
 
 ### Added
-- **Scrapling Stealth Engine**: Replaced the legacy Playwright scraper with the Scrapling engine to bypass the MalCare firewall on the TKRCET website.
-- **StealthyFetcher Implementation**: Includes randomized delays (3-7s), Google Referer headers, and Chrome fingerprinting to evade bot detection.
-- **Robust Text Extraction**: Improved content parsing using fallback CSS selectors to ensure full data capture even when standard visible text extraction is empty.
-- **Synchronous Scraper Workflow**: Refactored `tkrcet_scraper.py` for a stable, synchronous execution flow compatible with the latest Scrapling and Groq clients.
+- **Unified Brain (Deep Reasoning Chain)**: Implemented `DeepReasoningChain` using LangChain Agents to orchestrate complex queries between RAG and SQL systems.
+- **Expanded Test Suite**: Increased `tests/prompt_test.py` to support **607 unique prompts** (200 simple, 200 SQL, 207 complex) loaded dynamically from `tests/all_prompts.json`.
+- **Scrapling Stealth Engine**: Replaced the legacy Playwright scraper with the Scrapling engine for advanced bot evasion.
+- **Response Completeness Logic**: Enhanced generator prompts to ensure responses have a "natural end" and don't cut off mid-sentence, even near token limits.
+
+### Fixed
+- **"Chairmen" Query Error**: Standardized administrative title formatting in `KnowledgeBase.py` to fix specific person-lookup failures.
+- **Link Duplication**: Refactored `generator.py` to remove redundant "Source Links" and unify on top-level "Quick Links".
+- **System Robustness**: 
+  - Fixed absolute path handling for `students.db` in `SQLSystem`.
+  - Added recursion guards to `DeepReasoningChain` to prevent infinite loops on agent failure.
+  - Fixed missing `Path` imports causing 503 errors during backend startup.
 
 ## [3.6.0] - March 2026
 

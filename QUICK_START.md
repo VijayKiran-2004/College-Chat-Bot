@@ -1,4 +1,4 @@
-# Quick Start Guide - College Buddy v3.6
+# Quick Start Guide - College Buddy v3.7
 
 ---
 
@@ -113,7 +113,7 @@ python tools/refresh_logs.py
 ```bash
 python tests/prompt_test.py
 ```
-*Runs all test prompts, scores them across 8 quality metrics, and saves results incrementally to the Evaluation sheet. You can safely Ctrl+C — results up to that point are not lost.*
+*Runs all **607 test prompts** (Simple, SQL, Complex) from `tests/all_prompts.json`. Scores them across 8 quality metrics and saves results incrementally to the Evaluation sheet. You can safely Ctrl+C — results up to that point are not lost.*
 
 ### Inspect logs
 ```bash
@@ -138,13 +138,12 @@ python inspect_logs.py
 ## 📲 What's New
 
 
-### 📋 Logging & Evaluation Refinement — v3.6 (March 2026)
-- ✅ Production sheet simplified to 6 focused columns (Timestamp, Query, Response, Time Taken, Session, Source)
-- ✅ Evaluation sheet now records both **Latency (s)** (client round-trip) and **Server Time (s)** (pure backend time) side-by-side
-- ✅ `prompt_test.py` saves each result **immediately** after scoring — no data loss on interruption
-- ✅ New `tools/generate_metrics_pdf.py` generates a polished `logs/Metrics_Reference.pdf`
-- ✅ Greetings now bypass the full RAG pipeline for near-instant responses
-- ✅ `inspect_logs.py` fixed to display both Production and Evaluation sheets
+### 📋 Unified Brain & Enhanced Testing — v3.7 (March 2026)
+- ✅ **Deep Reasoning Chain**: Hybrid agent orchestrating complex RAG + SQL workflows.
+- ✅ **600+ Test Prompts**: Expanded test suite with diverse simple, structured, and complex queries.
+- ✅ **Response Completeness**: Commands LLM to provide "finished" responses even within limits.
+- ✅ **Initialization Fixes**: Resolved Path library and administrative title lookup issues.
+- ✅ New `logs/Metrics_Reference.pdf` auto-generated documentation.
 
 ### 🔗 Navigation Links (February 2026)
 - ✅ Clickable link chips below responses linking to relevant TKRCET website pages
@@ -229,5 +228,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 3.6.0  
-**Last Updated**: March 2026 (Cleanup & Docs Refresh)
+**Version**: 3.7.0  
+**Last Updated**: March 2026 (Unified Brain & Prompt Expansion)

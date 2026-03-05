@@ -113,30 +113,31 @@ class KnowledgeBase:
         if len(self.kb_entries) == 0:
             return None
             
-        query_lower = query.lower()
-        
-        if any(keyword in query_lower for keyword in ['principal', 'hod', 'dean', 'courses', 'timings', 'fees']):
-            print(f"  ⚡ [Fast Track] Keywords found in: '{query}'")
+        query_lower = query.lower().strip()
 
+        # 1. SPECIFIC KEYWORD MATCHES (High Priority)
+        # Society / Management
+        if any(word in query_lower for word in ['chairman', 'chairmen', "chairman's"]):
+            return f"The Chairman of TKRCET is {self.data['society']['chairman']}."
+            
+        if 'secretary' in query_lower:
+            return f"The Secretary of TKRCET is {self.data['society']['secretary']}."
+
+        # Personnel / Administration
         if 'principal' in query_lower and 'vice' not in query_lower:
-            return f"Principal: {self.data['personnel']['principal']}"
+            return f"The Principal of TKRCET is {self.data['personnel']['principal']}."
 
         if 'vice principal' in query_lower:
-            return f"Vice Principal: {self.data['personnel']['vice_principal']}"
+            return f"The Vice Principal of TKRCET is {self.data['personnel']['vice_principal']}."
+            
+        if 'dean' in query_lower and 'academic' in query_lower:
+             return f"The Dean Academics of TKRCET is {self.data['personnel']['dean_academics']}."
 
         # Full college name
         if any(p in query_lower for p in ['full name', 'full form', 'what does tkrcet stand', 'expand tkrcet', 'college name']):
             full_name = self.data.get('history', {}).get('full_name', 
                 'Teegala Krishna Reddy College of Engineering and Technology (TKRCET)')
-            return f"**Full Name:** {full_name}"
-
-        if 'secretary' in query_lower:
-            return f"Secretary: {self.data['personnel']['secretary']}"
-        if 'chairman' in query_lower:
-            return f"Chairman: {self.data['society']['chairman']}"
-
-        if 'dean' in query_lower and 'academic' in query_lower:
-             return f"Dean Academics: {self.data['personnel']['dean_academics']}"
+            return f"**Full Name of College:** {full_name}"
 
         if 'hod' in query_lower:
             deps = {
@@ -273,10 +274,14 @@ class KnowledgeBase:
             nss = self.data['activities']['nss']
             return f"**{nss['name']}**\n\n{nss['description']}\n\n**Motto:** \"{nss['motto']}\""
         
-        elif category == 'society' or key == 'colleges':
-            s = self.data['society']
-            colleges = "\n".join([f"{i+1}. {c}" for i, c in enumerate(s['colleges'])])
-            return f"The **{s['name']}** manages the following institutions:\n\n{colleges}"
+        # Special handling for society (Chairman/Secretary)
+        if category == 'society':
+            if 'chairman' in key.lower():
+                return f"The Chairman of TKRCET is {self.data['society']['chairman']}."
+            if 'secretary' in key.lower():
+                return f"The Secretary of TKRCET is {self.data['society']['secretary']}."
+            # Fallback for general society info
+            return f"TKRCET is managed by the Teegala Krishna Reddy Educational Society. Key members include Chairman {self.data['society']['chairman']} and Secretary {self.data['society']['secretary']}."
         
         elif category == 'courses':
             ug = ', '.join(self.data['courses']['ug'])

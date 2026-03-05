@@ -97,13 +97,19 @@ Thought:{agent_scratchpad}"""
         # Note: SQLSystem usually returns a DataFrame string representation
         return self.sql_system.query_students(query)
 
-    def run(self, query: str) -> str:
-        """Run the reasoning chain"""
+    def run(self, query: str, is_fallback=False) -> str:
+        """Run the reasoning chain with recursion guard"""
         try:
             print(f"\n[DeepChain] Processing: {query}")
             result = self.agent_executor.invoke({"input": query})
             return result['output']
         except Exception as e:
             print(f"⚠ Chain Error: {e}")
-            # Fallback to simple RAG if agent fails
-            return self.rag_system(query)
+            if is_fallback:
+                return "I'm having trouble processing that complex request right now. Please try a simpler question."
+            # Fallback to simple RAG if agent fails, but marked as fallback to prevent loops
+            try:
+                # Use the rag_system directly to avoid re-triggering the chain if called from a router
+                return self.rag_system(query)
+            except Exception:
+                return "I encountered an error while processing your request."

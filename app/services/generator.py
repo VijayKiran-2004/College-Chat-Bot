@@ -72,9 +72,11 @@ class Generator:
 
         if is_complex:
             print(f"  [Generator] Complex query detected — using detailed prompt.")
-            num_predict = 200  # Capped from 300 — saves ~25s on low-end hardware
+            num_predict = 500  # Increased from 200 to prevent truncation
             prompt = f"""You are the TKRCET College Buddy. {lang_instruction}
-Use ONLY the provided context. Be thorough and structured for this detailed question about TKRCET.
+Use ONLY the provided context. Be thorough and structured. 
+IMPORTANT: Ensure your response is complete and does not cut off mid-sentence. 
+If the information is too long, focus on the most important points to ensure a natural and complete ending.
 If steps are involved, use a numbered list. Use **bold** for key terms.
 
 Context:
@@ -86,9 +88,10 @@ Question: {query}
 Detailed Answer:"""
         else:
             print(f"  [Generator] Simple query — using compact prompt.")
-            num_predict = 150  # Short, fast answer
+            num_predict = 300  # Increased from 150
             prompt = f"""You are the TKRCET College Buddy. {lang_instruction}
-Rules: Use ONLY the provided context. Be concise. Assume all questions are about TKRCET.
+Rules: Use ONLY the provided context. Be concise and ensuring your response is complete. 
+Do not cut off mid-sentence. Assume all questions are about TKRCET.
 
 Context:
 {kb_context}
@@ -102,40 +105,32 @@ Answer:"""
         quick_links_section = ""
         if links:
             quick_links_section = "📌 **Quick Links:**\n"
+            seen_urls = set()
             for link in links:
+                url = link.get('url') if isinstance(link, dict) else link
+                if url in seen_urls: continue
+                seen_urls.add(url)
+                
                 if isinstance(link, dict):
                     title = link.get('title', 'Official Link')
-                    url = link.get('url', '#')
                 elif 'tkrcet' in link.lower():
                     title = "TKRCET Official Page"
-                    url = link
                 else:
                     title = "View Resource"
-                    url = link
                 quick_links_section += f"• [{title}]({url})\n"
             quick_links_section += "\n"
         
-        # Build source links footer
-        source_links_section = ""
-        if links:
-            source_links_section = "\n\n📚 **Source Links:**\n"
-            for link in links:
-                if isinstance(link, dict):
-                    source_links_section += f"• [{link['title']}]({link['url']})\n"
-                else:
-                    source_links_section += f"• {link}\n"
-        
         try:
             if stream:
-                return self._generate_stream(prompt, quick_links_section, source_links_section, context, temperature, num_predict)
+                return self._generate_stream(prompt, quick_links_section, context, temperature, num_predict)
             else:
-                return self._generate_sync(prompt, quick_links_section, source_links_section, context, temperature, num_predict)
+                return self._generate_sync(prompt, quick_links_section, context, temperature, num_predict)
         except Exception as e:
             print(f"⚠ Ollama error: {e}")
-            fallback = quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}" + source_links_section
+            fallback = quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}"
             return self._yield_fallback(fallback) if stream else fallback
 
-    def _generate_sync(self, prompt, quick_links_section, source_links_section, context, temperature, num_predict=150):
+    def _generate_sync(self, prompt, quick_links_section, context, temperature, num_predict=150):
         """Internal sync generation"""
         response = requests.post(
             self.ollama_url,
@@ -154,11 +149,11 @@ Answer:"""
         if response.status_code == 200:
             answer = response.json().get('response', '').strip()
             if answer:
-                return quick_links_section + answer + source_links_section
+                return quick_links_section + answer
         
-        return quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}" + source_links_section
+        return quick_links_section + f"⚠ I couldn't generate a full response right now (Ollama may be busy). Here's the raw context I found:\n\n{context}"
 
-    def _generate_stream(self, prompt, quick_links_section, source_links_section, context, temperature, num_predict=150):
+    def _generate_stream(self, prompt, quick_links_section, context, temperature, num_predict=150):
         """Internal stream generation"""
         response = requests.post(
             self.ollama_url,
@@ -186,8 +181,6 @@ Answer:"""
                     if 'response' in chunk_data:
                         yield chunk_data['response']
                     if chunk_data.get('done', False):
-                        if source_links_section:
-                            yield source_links_section
                         break
                 except json.JSONDecodeError:
                     continue

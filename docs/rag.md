@@ -1,6 +1,6 @@
 # College Buddy RAG System
 
-This document describes the Retrieval-Augmented Generation (RAG) pipeline powering the College Buddy chatbot. The system retrieves accurate, up-to-date information from the TKRCET knowledge base and generates natural responses using a cloud LLM.
+This document describes the Retrieval-Augmented Generation (RAG) pipeline powering the College Buddy chatbot. The system retrieves accurate, up-to-date information from the TKRCET knowledge base and generates natural responses using a local Ollama LLM.
 
 ---
 
@@ -42,7 +42,7 @@ A **cross-encoder** (`cross-encoder/ms-marco-MiniLM-L-6-v2`) re-scores every can
 
 ### 4. Generation (`generator.py`)
 
-The top reranked chunks are injected into a structured prompt and sent to **Groq** (`llama-3.1-8b-instant`) for generation.
+The top reranked chunks are injected into a structured prompt and sent to **Ollama** (`llama3.2:3b`) for generation.
 
 - Temperature: `0` (deterministic, factual answers)
 - Context window: up to 15,000 chars of retrieved text
@@ -90,7 +90,7 @@ Query Router
 | Dense Index | FAISS (`faiss-cpu`) |
 | Sparse Index | BM25 (`rank_bm25`) |
 | Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
-| LLM | Groq Cloud → `llama-3.1-8b-instant` |
+| LLM | Ollama → `llama3.2:3b` (Groq used for Scraping) |
 | Student DB | SQLite (`students.db`) |
 | API Server | FastAPI + Uvicorn |
 

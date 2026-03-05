@@ -234,8 +234,8 @@ college-buddy/
 │   └── ingest.py              # ChromaDB ingestion
 │
 ├── tests/
-│   ├── prompt_test.py         # Evaluation suite — runs prompts, scores metrics,
-│   │                          # saves results incrementally to Evaluation sheet
+│   ├── prompt_test.py         # Evaluation suite — runs 600+ prompts from all_prompts.json
+│   ├── all_prompts.json       # Central test repository (Simple, SQL, Complex)
 │   └── ...                    # Other unit & integration tests
 │
 ├── tools/
@@ -346,5 +346,5 @@ python tests/prompt_test.py
 > Make sure **Ollama** is running in the background with `ollama serve` before starting the backend!
 
 ---
-**Version**: 3.7.0 (Scrapling Stealth Engine Upgrade)
+**Version**: 3.7.0 (Unified Brain & Prompt Expansion)
 **Status**: Production Ready ✅
