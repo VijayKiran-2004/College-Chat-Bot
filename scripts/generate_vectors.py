@@ -33,8 +33,8 @@ FAQ_DATA     = str(_PROJECT_ROOT / "data" / "rawdata" / "faq_rows.json")
 OUTPUT_FILE  = str(_PROJECT_ROOT / "data" / "chunks" / "unified_vectors.json")
 
 # Chunking parameters
-MAX_CHUNK_SIZE = 500  # characters per chunk
-CHUNK_OVERLAP = 50    # overlap for context continuity
+MAX_CHUNK_SIZE = 1000  # characters per chunk
+CHUNK_OVERLAP = 150    # overlap for context continuity
 
 
 def clean_text(text):

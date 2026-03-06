@@ -1,6 +1,7 @@
 import json
 import re
 import requests
+from pathlib import Path
 
 class Generator:
     """Handles prompt formulation and LLM response generation via Ollama"""
@@ -16,6 +17,36 @@ class Generator:
     def __init__(self, ollama_model, ollama_url):
         self.ollama_model = ollama_model
         self.ollama_url = ollama_url
+        
+        # Load Soul from JSON
+        self.soul = self._load_soul()
+        print(f"  ✓ Soul loaded (v{self.soul.get('_version', 'unknown')})")
+
+    def _load_soul(self) -> dict:
+        """Load the bot personality/soul from app/config/soul.json"""
+        soul_path = Path(__file__).resolve().parent.parent / 'config' / 'soul.json'
+        try:
+            with open(soul_path, 'r', encoding='utf-8') as f:
+                soul = json.load(f)
+            return soul
+        except FileNotFoundError:
+            print(f"⚠ Soul file not found at {soul_path}. Using built-in defaults.")
+            return self._default_soul()
+        except json.JSONDecodeError as e:
+            print(f"⚠ Soul file has invalid JSON ({e}). Using built-in defaults.")
+            return self._default_soul()
+    
+    def _default_soul(self) -> dict:
+        """Hardcoded fallback soul in case soul.json is missing or corrupt"""
+        return {
+            "_version": "fallback",
+            "compact": "You are College Buddy, the official TKRCET assistant. Answer ONLY from the provided context. Never guess. If the context doesn't have the answer, say you don't have that information.",
+            "complex_extension": "Use numbered lists for procedures. Bold key terms. Be thorough.",
+            "greeting": "You are College Buddy, the official TKRCET assistant. Respond with a short, warm greeting and ask how you can help.",
+            "fallback_no_info": "I don't have specific information on that right now. Please reach out to the college office or visit tkrcet.ac.in.",
+            "fallback_off_topic": "I'm here to help with TKRCET-related queries only! Is there something about the college I can assist you with?",
+            "fallback_error": "I'm having a little trouble right now. Please try again in a moment, or visit tkrcet.ac.in for help."
+        }
 
     def _is_complex_query(self, query: str) -> bool:
         """Quick regex-based complexity check — no model call needed."""
@@ -36,10 +67,10 @@ class Generator:
             is_greeting: If True, uses a lite prompt for greetings
         """
         
+        # ── Greeting fast-track ──────────────────────────────────
         if is_greeting:
-            lite_prompt = f"You are the official TKRCET College Buddy. The user just said '{query}'. " \
-                          f"Respond with a short, professional, and very friendly greeting and ask how you can help them today with college-related queries. " \
-                          f"Keep it under 2 sentences and very welcoming. Answer in English unless they spoke to you in another language."
+            greeting_soul = self.soul.get('greeting', self._default_soul()['greeting'])
+            lite_prompt = f"{greeting_soul}\n\nThe user said: \"{query}\""
             try:
                 if stream:
                     return self._generate_stream(lite_prompt, "", "", temperature)
@@ -47,8 +78,10 @@ class Generator:
                     return self._generate_sync(lite_prompt, "", "", temperature)
             except Exception as e:
                 print(f"⚠ Greeting Fast-track error: {e}")
-                return self._yield_fallback("Hello! I'm your TKRCET College Buddy. How can I help you today?") if stream else "Hello! I'm your TKRCET College Buddy. How can I help you today?"
+                fallback = "Hello! I'm your TKRCET College Buddy. How can I help you today?"
+                return self._yield_fallback(fallback) if stream else fallback
 
+        # ── Build context pieces ─────────────────────────────────
         # Prioritize raw KB Fast Track facts if available
         found_fact_section = ""
         if kb_fact:
@@ -57,27 +90,22 @@ class Generator:
         # Build context from retrieved documents (Reduce length to 500 chars to save prefill time)
         context = "\n\n".join([f"• {doc['contents'][:500]}" for doc in docs[:3]])
         
-        lang_instruction = ""
-        if language == 'hi':
-            lang_instruction = "Answer in HINDI (हिंदी)."
-        elif language == 'te':
-            lang_instruction = "Answer in TELUGU (తెలుగు)."
-        else:
-            lang_instruction = "Answer in English."
+        lang_instruction = "Answer in English."
 
-        # --- Dual-Prompt Strategy ---
-        # Complex queries (procedures, lists) get a richer prompt for accuracy.
-        # Simple queries keep the compact prompt for maximum speed.
+        # ── Dual-Prompt Strategy (Soul-Powered) ──────────────────
+        # Complex queries get compact + complex_extension soul.
+        # Simple queries get compact soul only.
+        soul_core = self.soul.get('compact', self._default_soul()['compact'])
         is_complex = self._is_complex_query(query)
 
         if is_complex:
             print(f"  [Generator] Complex query detected — using detailed prompt.")
-            num_predict = 500  # Increased from 200 to prevent truncation
-            prompt = f"""You are the TKRCET College Buddy. {lang_instruction}
-Use ONLY the provided context. Be thorough and structured. 
-IMPORTANT: Ensure your response is complete and does not cut off mid-sentence. 
-If the information is too long, focus on the most important points to ensure a natural and complete ending.
-If steps are involved, use a numbered list. Use **bold** for key terms.
+            soul_extension = self.soul.get('complex_extension', self._default_soul()['complex_extension'])
+            num_predict = 500
+            prompt = f"""{soul_core}
+
+{soul_extension}
+{lang_instruction}
 
 Context:
 {kb_context}
@@ -88,10 +116,9 @@ Question: {query}
 Detailed Answer:"""
         else:
             print(f"  [Generator] Simple query — using compact prompt.")
-            num_predict = 300  # Increased from 150
-            prompt = f"""You are the TKRCET College Buddy. {lang_instruction}
-Rules: Use ONLY the provided context. Be concise and ensuring your response is complete. 
-Do not cut off mid-sentence. Assume all questions are about TKRCET.
+            num_predict = 300
+            prompt = f"""{soul_core}
+{lang_instruction}
 
 Context:
 {kb_context}
@@ -131,7 +158,8 @@ Answer:"""
             return quick_links_section + f"⚠ {error_msg}\n\nRaw Context:\n{context}"
         except Exception as e:
             print(f"⚠ Ollama error: {e}")
-            fallback = quick_links_section + f"⚠ I couldn't generate a full response right now. Error: {str(e)}\n\nRaw context:\n\n{context}"
+            fallback_msg = self.soul.get('fallback_error', "I'm having trouble right now. Please try again.")
+            fallback = quick_links_section + f"⚠ {fallback_msg}"
             return self._yield_fallback(fallback) if stream else fallback
 
     def _generate_sync(self, prompt, quick_links_section, context, temperature, num_predict=150):

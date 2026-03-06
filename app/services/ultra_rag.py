@@ -256,6 +256,9 @@ class UltraRAGSystem:
             
         links = self.link_manager.extract_relevant_links(docs, query)
         kb_context = self.kb.format_context()
+        context_snippets = [d.get("contents", "") for d in docs[:3]]
+        if kb_fact:
+            context_snippets.insert(0, f"KNOWLEDGE BASE FACT: {kb_fact}")
         
         # Generation — send top 2 docs (best after re-ranking)
         response = self.generator.generate(
@@ -278,7 +281,12 @@ class UltraRAGSystem:
         self._save_cache()
 
         if return_dict:
-            return {"response": response, "source": source, "confidence": confidence}
+            return {
+                "response": response, 
+                "source": source, 
+                "confidence": confidence,
+                "context": context_snippets
+            }
         return response
 
 

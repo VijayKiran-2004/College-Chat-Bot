@@ -228,7 +228,6 @@ college-buddy/
 ├── scripts/
 │   ├── tkrcet_scraper.py      # Advanced Stealth Scraper (Scrapling + Groq)
 │   ├── tkrcet_links.txt       # Unified link list for scraping
-│   ├── prepare_data.py        # Flattens nested JSON into RAG format
 │   ├── generate_vectors.py    # Unified vectors generator (chunking)
 │   ├── corpus_converter.py    # JSON → JSONL converter
 │   └── ingest.py              # ChromaDB ingestion
@@ -346,5 +345,5 @@ python tests/prompt_test.py
 > Make sure **Ollama** is running in the background with `ollama serve` before starting the backend!
 
 ---
-**Version**: 3.7.0 (Unified Brain & Prompt Expansion)
+**Version**: 3.7.2 (Codebase Cleanup & Sync)
 **Status**: Production Ready ✅

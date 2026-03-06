@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.2] - March 2026
+
+### Fixed
+- **Codebase Compactness**: Removed legacy `scripts/prepare_data.py` and redundant debug/backup files.
+- **Documentation Sync**: Synchronized all documentation (README, Quick Start, Codebase Reference) with the latest codebase state.
+- **Restoration**: Restored the full 607-prompt test suite in `tests/all_prompts.json` as per user request.
+
 ## [3.7.1] - March 2026
 
 ### Fixed
@@ -188,5 +195,5 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-**Current Version**: 3.5.0  
+**Current Version**: 3.7.2  
 **Status**: Production Ready ✅

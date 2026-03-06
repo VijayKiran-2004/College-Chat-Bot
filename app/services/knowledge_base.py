@@ -179,9 +179,36 @@ class KnowledgeBase:
             f = self.data['fees']
             note = f.get('note', 'Fees are subject to change as per government regulations.')
             return f"**Fee Structure (Approximate):**\n\n• **B.Tech:** {f['btech']}\n• **M.Tech:** {f['mtech']}\n• **MBA:** {f['mba']}\n\n• **Hostel:** {f['hostel']}\n• **Transport:** {f['transport']}\n\n_{note}_"
-        
-        if 'fee' in query_lower and ('pay' in query_lower or 'payment' in query_lower):
-            return "**Fee Payment:**\n\nFees can be paid at the Accounts Department in the Administrative Block. Payment modes include:\n• Cash\n• Demand Draft\n• Online Transfer\n\nFor detailed payment procedures, please contact the Accounts Department or visit the college office."
+
+        # --- Exam / Semester / Supply fee ---
+        if any(w in query_lower for w in ['exam fee', 'semester fee', 'sem fee', 'supply fee', 'examination fee']):
+            ss = self.data.get('student_services', {})
+            return ss.get('exam_fee_payment', 'Please contact the Accounts Department for exam fee payment details.')
+
+        # --- Tuition / Admission fee payment procedure ---
+        if 'fee' in query_lower and any(w in query_lower for w in ['pay', 'payment', 'submit', 'how to pay', 'how do i pay']):
+            ss = self.data.get('student_services', {})
+            return ss.get('fee_payment', 'Please contact the Accounts Department for fee payment details.')
+
+        # --- Transport fee ---
+        if any(w in query_lower for w in ['transport fee', 'bus fee', 'transportation fee']):
+            ss = self.data.get('student_services', {})
+            return ss.get('transportation_fee', self.data['facilities']['transport']['contact'])
+
+        # --- Hostel fee ---
+        if any(w in query_lower for w in ['hostel fee', 'accommodation fee']):
+            ss = self.data.get('student_services', {})
+            return ss.get('hostel_fee', 'Please contact the Hostel Office for fee payment details.')
+
+        # --- Bonafide Certificate ---
+        if any(w in query_lower for w in ['bonafide', 'bona fide', 'bonafide certificate', 'bonafide letter']):
+            ss = self.data.get('student_services', {})
+            return ss.get('bonafide_certificate', 'Please visit the college office to apply for a bonafide certificate.')
+
+        # --- Scholarship ---
+        if any(w in query_lower for w in ['scholarship', 'fellowships', 'stipend', 'financial aid']):
+            ss = self.data.get('student_services', {})
+            return ss.get('scholarship', 'Please visit the scholarship window in the main block for details.')
         
         if any(word in query_lower for word in ['library head', 'head of library', 'librarian', 'library in charge', 'library staff']):
             lib_head = self.data.get('personnel', {}).get('library_head', None)

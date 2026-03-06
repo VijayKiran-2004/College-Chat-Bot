@@ -283,9 +283,9 @@
         <h1>📚 College Chat Bot</h1>
         <h2>Full Codebase Reference Document</h2>
         <p class="meta">Project: TKR College of Engineering &amp; Technology (TKRCET) AI Chatbot<br>
-            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Updated: March 2026 (v3.7 &mdash; Unified Brain
-            &amp;
-            Prompt Expansion)</p>
+            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Updated: March 2026 (v3.7.2 &mdash; Cleanup &amp;
+            Sync)
+        </p>
     </div>
 
     <div class="container">
@@ -885,17 +885,7 @@
             </div>
         </div>
 
-        <div class="file-card">
-            <span class="file-path">scripts/prepare_data.py</span><span class="file-type">Python — Step 1.5: Data
-                Flattener</span>
-            <h4>RAG Data Preparation Script</h4>
-            <p>Converts the complex nested JSON output from the AI scraper into a flattened text format suitable for
-                vectorization.
-                Ensures that every section and list item is correctly preserved as searchable text.</p>
-            <div class="generates"><strong>📤 Generates:</strong> <code>app/database/vectordb/scraped_data.jsonl</code>
-                — serves as the transition point to the vectorization pipeline.
-            </div>
-        </div>
+
 
         <div class="file-card">
             <span class="file-path">scripts/ingest.py</span><span class="file-type">Python — Step 2: Vector DB
@@ -1295,18 +1285,15 @@
                         knowledge)</small></div>
             </div>
             <div class="arch-flow" style="margin-top:12px;">
-                <div class="arch-node">④ scripts/prepare_data.py<br><small style="font-weight:300">(flatten search
-                        context)</small></div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-node">⑤ scripts/generate_vectors.py<br><small
+                <div class="arch-node">④ scripts/generate_vectors.py<br><small
                         style="font-weight:300">(chunking)</small></div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">⑥ unified_vectors.json</div>
+                <div class="arch-node">⑤ unified_vectors.json</div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">⑥ scripts/corpus_converter.py</div>
+                <div class="arch-node">⑤ scripts/corpus_converter.py</div>
             </div>
             <div class="arch-flow" style="margin-top:12px;">
-                <div class="arch-node">⑦ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
+                <div class="arch-node">⑥ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
                         ChromaDB)</small></div>
                 <div class="arch-arrow">→</div>
                 <div class="arch-node">⑧ vectordb/chroma/<br><small style="font-weight:300">(vector DB —

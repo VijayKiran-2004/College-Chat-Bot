@@ -228,5 +228,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 3.7.0  
-**Last Updated**: March 2026 (Unified Brain & Prompt Expansion)
+**Version**: 3.7.2  
+**Last Updated**: March 2026 (Reset & Cleanup)

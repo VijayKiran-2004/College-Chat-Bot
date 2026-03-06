@@ -77,15 +77,18 @@ class QueryRouter:
                  response = result.get('response')
                  source = result.get('source', 'Greeting Fast-track')
                  confidence = result.get('confidence', 100)
+                 context = result.get('context', [])
             else:
                  response = result
                  source = "Greeting Fast-track"
                  confidence = 100
+                 context = []
             
             return {
                 "response": response,
                 "source": source,
-                "accuracy": f"{confidence}%"
+                "accuracy": f"{confidence}%",
+                "context": context
             }
 
         elif intent == 'general':
@@ -95,15 +98,18 @@ class QueryRouter:
                  response = result.get('response')
                  source = result.get('source', 'RAG/Knowledge Base')
                  confidence = result.get('confidence', 0)
+                 context = result.get('context', [])
             else:
                  response = result
                  source = "RAG/Knowledge Base"
                  confidence = 0
+                 context = []
             
             return {
                 "response": response,
                 "source": source,
-                "accuracy": f"{confidence}%"
+                "accuracy": f"{confidence}%",
+                "context": context
             }
         
         elif intent == 'student':
@@ -112,7 +118,8 @@ class QueryRouter:
             return {
                 "response": response,
                 "source": "SQL Database",
-                "accuracy": "100%"  # SQL is deterministic
+                "accuracy": "100%",
+                "context": [f"SQL Result: {response}"]
             }
         
         elif intent == 'hybrid':
@@ -122,7 +129,8 @@ class QueryRouter:
             return {
                 "response": response,
                 "source": "Deep Reasoning Agent",
-                "accuracy": "N/A"  # Agent uses multiple sources
+                "accuracy": "N/A",
+                "context": [f"Agent reasoning for: {query}"]
             }
         
         else:
@@ -132,7 +140,8 @@ class QueryRouter:
             return {
                 "response": response,
                 "source": "Deep Reasoning Agent (Fallback)",
-                "accuracy": "N/A"
+                "accuracy": "N/A",
+                "context": [f"Agent reasoning for: {query}"]
             }
 
     

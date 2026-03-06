@@ -57,7 +57,7 @@ def check_ollama():
 
 def check_files():
     print("--- Checking Data Files ---")
-    project_root = Path(__file__).parent
+    project_root = Path(__file__).parent.parent  # Go up from tests/ to project root
     files_to_check = [
         ("Knowledge Base", "data/knowledge_base.json"),
         ("RAG Corpus", "data/chunks/corpus_ultrarag.jsonl"),
@@ -88,9 +88,10 @@ def check_files():
 
 def check_env():
     print("--- Checking Environment ---")
-    if os.path.exists(".env"):
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
         print("[OK] .env file found.")
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             content = f.read()
             if "GROQ_API_KEY" in content and "=" in content:
                 key = content.split("GROQ_API_KEY=")[1].split("\n")[0].strip()
