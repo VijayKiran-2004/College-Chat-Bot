@@ -283,8 +283,9 @@
         <h1>📚 College Chat Bot</h1>
         <h2>Full Codebase Reference Document</h2>
         <p class="meta">Project: TKR College of Engineering &amp; Technology (TKRCET) AI Chatbot<br>
-            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Updated: March 2026 (v3.6 &mdash; Logging &amp;
-            Evaluation Refinement)</p>
+            Repository: VijayKiran-2004/College-Chat-Bot &nbsp;|&nbsp; Updated: March 2026 (v3.7.2 &mdash; Cleanup &amp;
+            Sync)
+        </p>
     </div>
 
     <div class="container">
@@ -884,17 +885,7 @@
             </div>
         </div>
 
-        <div class="file-card">
-            <span class="file-path">scripts/prepare_data.py</span><span class="file-type">Python — Step 1.5: Data
-                Flattener</span>
-            <h4>RAG Data Preparation Script</h4>
-            <p>Converts the complex nested JSON output from the AI scraper into a flattened text format suitable for
-                vectorization.
-                Ensures that every section and list item is correctly preserved as searchable text.</p>
-            <div class="generates"><strong>📤 Generates:</strong> <code>app/database/vectordb/scraped_data.jsonl</code>
-                — serves as the transition point to the vectorization pipeline.
-            </div>
-        </div>
+
 
         <div class="file-card">
             <span class="file-path">scripts/ingest.py</span><span class="file-type">Python — Step 2: Vector DB
@@ -1079,18 +1070,43 @@
 
         <div class="file-card">
             <span class="file-path">docs/chunking.md</span><span class="file-type">Markdown — Technical Doc</span>
-            <h4>Text Chunking Strategy</h4>
-            <p>Explains why and how semantic chunking (vs. naive fixed-size chunking) is used. Details the percentile
-                breakpoint method from LangChain's SemanticChunker and how contextual prefix enrichment improves
-                retrieval quality.</p>
+            <h4>Dual-Stage Text Chunking Strategy</h4>
+            <p>Documents the sophisticated two-part approach used to balance speed and semantic accuracy:</p>
+            <ul>
+                <li><strong>Stage 1: Sentence-Boundary Chunking</strong> (in <code>generate_vectors.py</code>) — Splits
+                    text into ~500 character blocks using punctuation breaks to preserve readability. Includes a
+                    50-character overlap to maintain context across boundaries.</li>
+                <li><strong>Stage 2: Semantic Chunking</strong> (in <code>ingest.py</code>) — Uses LangChain's
+                    <code>SemanticChunker</code> to analyze the meaning of sentences. It breaks chunks when the
+                    underlying topic changes (percentile breakpoint), ensuring logical grouping for the database.
+                </li>
+                <li><strong>Contextual Enrichment</strong>: Every chunk is prepended with its Page Title and Source URL
+                    so the AI never loses the context of a fact.</li>
+            </ul>
         </div>
 
         <div class="file-card">
             <span class="file-path">docs/Embeddings_SqlDB.md</span><span class="file-type">Markdown — Technical
                 Doc</span>
-            <h4>Embeddings + SQL Integration Notes</h4>
-            <p>Covers how the system blends vector search (RAG) and relational data (SQL) — the design decisions behind
-                having both systems and when each is preferred.</p>
+            <h4>Machine Learning Embeddings: all-MiniLM-L6-v2</h4>
+            <p>Every piece of text in our system (scraped pages, FAQs, student questions) is converted into a
+                <strong>Vector Embedding</strong> using the <code>all-MiniLM-L6-v2</code> model.
+            </p>
+            <ul>
+                <li><strong>What are Embeddings?</strong> They are a list of 384 numbers that represent the
+                    <em>mathematical meaning</em> of a sentence. This allows the bot to understand that "fee structure"
+                    and "how much is the cost" mean the same thing.
+                </li>
+                <li><strong>Why all-MiniLM-L6-v2?</strong> It is the industry standard for lightweight, local RAG. It is
+                    extremely fast (runs on CPU) while being remarkably accurate at capturing semantic meaning.</li>
+                <li><strong>System Roles:</strong>
+                    <ul>
+                        <li><strong>Vector DB:</strong> Stores college knowledge vectors for retrieval.</li>
+                        <li><strong>Intent Detection:</strong> Compares the user's question to "template" vectors for
+                            Student queries vs. General queries to decide which system to use.</li>
+                    </ul>
+                </li>
+            </ul>
         </div>
 
         <div class="file-card">
@@ -1203,61 +1219,39 @@
                 component.</div>
         </div>
 
-        <!-- analyze_csv.py, detailed_log_analysis.py, refresh_logs.py removed — moved to tools/ -->
+        <div class="file-card">
+            <span class="file-path">tests/prompt_test.py</span><span class="file-type">Python — Evaluation Suite</span>
+            <h4>Automated Quality Evaluation</h4>
+            <p>The primary testing and evaluation tool. It loads 600+ prompts from <code>all_prompts.json</code>, runs
+                them
+                through the chatbot, scores them against 11 metrics, and saves
+                results incrementally to the Evaluation sheet in <code>response_log.xlsx</code>.</p>
+            <div class="generates"><strong>📤 Generates:</strong> Evaluation sheet entries + server-side Latency and
+                Server Time metrics.</div>
+        </div>
+
+        <div class="file-card">
+            <span class="file-path">tests/all_prompts.json</span><span class="file-type">JSON — Data Layer</span>
+            <h4>Central Test Prompt Repository</h4>
+            <p>A comprehensive collection of <strong>607 unique test prompts</strong> (Simple, SQL, Complex) to ensure
+                diverse and reliable test coverage.</p>
+            <div class="generates"><strong>📤 Usage:</strong> Primary data source for <code>prompt_test.py</code>.</div>
+        </div>
 
         <div class="file-card">
             <span class="file-path">tests/test_gender.py</span><span class="file-type">Python — Unit Test</span>
             <h4>Gender Query Test</h4>
             <p>Tests that gender-based SQL queries work correctly — e.g., "show all female students" or "how many male
-                students are placed?" Verifies the regex entity extractor handles gender keywords properly.</p>
+                students are placed?".</p>
             <div class="generates"><strong>📤 Generates:</strong> Pass/fail test results printed to terminal.</div>
         </div>
 
         <div class="file-card">
             <span class="file-path">tests/test_llm_sql.py</span><span class="file-type">Python — Unit Test</span>
             <h4>LLM-based SQL Generation Test</h4>
-            <p>Tests the fallback SQL generation path — where Llama 3.2:3b is asked to write the SQL query. Verifies the
-                LLM produces valid SQLite syntax for various question types.</p>
+            <p>Tests the fallback SQL generation path — where Llama 3.2:3b is asked to write the SQL query.</p>
             <div class="generates"><strong>📤 Generates:</strong> Test queries and generated SQL printed to terminal.
             </div>
-        </div>
-
-        <div class="file-card">
-            <span class="file-path">tests/test_logging_integration.py</span><span class="file-type">Python — Integration
-                Test</span>
-            <h4>Logging Integration Test</h4>
-            <p>End-to-end test that sends a query through the full pipeline and verifies it was correctly written to the
-                Excel log file with all required columns.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Test log entries in
-                <code>logs/response_log.xlsx</code> + pass/fail output.
-            </div>
-        </div>
-
-        <div class="file-card">
-            <span class="file-path">tests/test_router_upgrade.py</span><span class="file-type">Python — Integration
-                Test</span>
-            <h4>Query Router Upgrade Test</h4>
-            <p>Tests that the <code>QueryRouter</code> correctly classifies and routes different types of queries to the
-                right subsystem. Useful after modifying the intent detection logic.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Routing decisions for each test query, printed to
-                terminal.</div>
-        </div>
-
-        <div class="file-card">
-            <span class="file-path">tests/test_typo.py</span><span class="file-type">Python — Unit Test</span>
-            <h4>Typo Handling Test</h4>
-            <p>Tests the chatbot's robustness to spelling mistakes and typos — e.g., "Who s the principel?" — verifying
-                the intent detector and KB still return correct results.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Test results printed to terminal.</div>
-        </div>
-
-        <div class="file-card">
-            <span class="file-path">tests/run_batch_test.py</span><span class="file-type">Python — Testing</span>
-            <h4>Batch Query Tester</h4>
-            <p>Runs a predefined list of test questions through the full chatbot pipeline and records the responses.
-                Used to evaluate chatbot response quality across different question types before a release.</p>
-            <div class="generates"><strong>📤 Generates:</strong> Prints responses to terminal or saves to a test
-                results file.</div>
         </div>
 
         <!-- ===== SECTION 14: NOTEBOOKS ===== -->
@@ -1291,18 +1285,15 @@
                         knowledge)</small></div>
             </div>
             <div class="arch-flow" style="margin-top:12px;">
-                <div class="arch-node">④ scripts/prepare_data.py<br><small style="font-weight:300">(flatten search
-                        context)</small></div>
-                <div class="arch-arrow">→</div>
-                <div class="arch-node">⑤ scripts/generate_vectors.py<br><small
+                <div class="arch-node">④ scripts/generate_vectors.py<br><small
                         style="font-weight:300">(chunking)</small></div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">⑥ unified_vectors.json</div>
+                <div class="arch-node">⑤ unified_vectors.json</div>
                 <div class="arch-arrow">→</div>
-                <div class="arch-node">⑥ scripts/corpus_converter.py</div>
+                <div class="arch-node">⑤ scripts/corpus_converter.py</div>
             </div>
             <div class="arch-flow" style="margin-top:12px;">
-                <div class="arch-node">⑦ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
+                <div class="arch-node">⑥ scripts/ingest.py<br><small style="font-weight:300">(SemanticChunker +
                         ChromaDB)</small></div>
                 <div class="arch-arrow">→</div>
                 <div class="arch-node">⑧ vectordb/chroma/<br><small style="font-weight:300">(vector DB —
@@ -1342,8 +1333,8 @@
             <tr>
                 <td>3</td>
                 <td><code>ollama pull gemma3:1b</code></td>
-                <td>Download Gemma 3 model (for intent routing)</td>
-                <td>First time setup only</td>
+                <td>Download Gemma 3 model (for evaluation judge)</td>
+                <td>Optional (for testing only)</td>
             </tr>
             <tr>
                 <td>4</td>
@@ -1366,7 +1357,7 @@
             <tr>
                 <td>7</td>
                 <td><code>python scripts/corpus_converter.py</code></td>
-                <td>Convert to UltraRAG format</td>
+                <td>Convert to UltraRAG format (JSONL)</td>
                 <td>After vector generation or cleanup</td>
             </tr>
             <tr>
@@ -1434,7 +1425,7 @@
 
     <footer>
         College Chat Bot — Codebase Reference Document &nbsp;|&nbsp; TKR College of Engineering &amp; Technology
-        &nbsp;|&nbsp; February 2026
+        &nbsp;|&nbsp; March 2026 (v3.7.0)
     </footer>
 </body>
 

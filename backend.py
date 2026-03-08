@@ -48,6 +48,7 @@ class QueryResponse(BaseModel):
     source: Optional[str] = "Unknown"
     confidence: Optional[int] = None
     time_taken: Optional[float] = None
+    context: Optional[List[str]] = None
 
 
 # ============================================================
@@ -78,10 +79,13 @@ async def lifespan(app: FastAPI):
             import threading
             def warmup():
                 try:
-                    query_router.rag_system.generator.generate(
+                    response = query_router.rag_system.generator.generate(
                         query="warmup", docs=[], kb_context="", links=[], is_greeting=True
                     )
-                    print("✓ Ollama model warmed up!")
+                    if isinstance(response, str) and "⚠" in response:
+                        print(f"⚠ Warmup failed: {response}")
+                    else:
+                        print("✓ Ollama model warmed up!")
                 except Exception as e:
                     print(f"⚠ Warmup failed: {e}")
             
@@ -175,7 +179,7 @@ def initialize_systems():
 # API ENDPOINTS
 # ============================================================
 
-def log_async(user_query, bot_response, time_taken, session_id, source, accuracy_label=None, context_snippets=None):
+def log_async(user_query, bot_response, time_taken, session_id, source, context_snippets=None):
     """Background task to log the response to the Production sheet."""
     try:
         if response_logger:
@@ -185,6 +189,7 @@ def log_async(user_query, bot_response, time_taken, session_id, source, accuracy
                 time_taken=time_taken,
                 session_id=session_id,
                 source=source,
+                context=context_snippets
             )
         print(f"✓ Background logging complete for session: {session_id}")
     except Exception as e:
@@ -324,6 +329,7 @@ async def chat(request: QueryRequest, background_tasks: BackgroundTasks):
                             response_time,
                             session_id,
                             actual_source if "actual_source" in locals() else "RAG (Streamed)",
+                            context_snippets if "context_snippets" in locals() else []
                         )
                 except Exception as e:
                     print(f"Streaming error: {e}")
@@ -342,6 +348,7 @@ async def chat(request: QueryRequest, background_tasks: BackgroundTasks):
             # Non-streaming response for SQL queries (they're already fast)
             response_source = "Unknown"
             response_accuracy = "N/A"
+            response_context = []
             
             try:
                 import requests
@@ -358,6 +365,7 @@ async def chat(request: QueryRequest, background_tasks: BackgroundTasks):
                             answer = result.get('response', str(result))
                             response_source = result.get('source', 'Unknown')
                             response_accuracy = result.get('accuracy', 'N/A')
+                            response_context = result.get('context', [])
                         else:
                             # Fallback for old format
                             answer = str(result)
@@ -399,7 +407,7 @@ async def chat(request: QueryRequest, background_tasks: BackgroundTasks):
                     response_time,
                     session_id,
                     response_source,
-                    response_accuracy
+                    response_context
                 )
             
             # Keep session history manageable (last 50 exchanges)
@@ -411,7 +419,8 @@ async def chat(request: QueryRequest, background_tasks: BackgroundTasks):
                 session_id=session_id,
                 source=response_source,
                 confidence=100 if response_accuracy == "High" else 50 if response_accuracy == "N/A" else 0,
-                time_taken=round(response_time, 4)
+                time_taken=round(response_time, 4),
+                context=response_context
             )
     
     except Exception as e:

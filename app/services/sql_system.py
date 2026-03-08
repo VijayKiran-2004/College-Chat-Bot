@@ -5,16 +5,18 @@ Handles natural language queries about student data
 import sqlite3
 import pandas as pd
 import re
+from pathlib import Path
 
 import os
 import requests
 import json
 
 class SQLSystem:
-    def __init__(self, db_path='app/database/students.db', ollama_model=None, ollama_url=None):
+    def __init__(self, db_path=None, ollama_model=None, ollama_url=None):
         """Initialize SQL system with student database"""
-        self.db_path = db_path
-        self.conn = sqlite3.connect(db_path, check_same_thread=False) # Helper for threading
+        project_root = Path(__file__).resolve().parent.parent.parent
+        self.db_path = db_path or str(project_root / 'app/database/students.db')
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         
         # Ollama Configuration
         self.ollama_model = ollama_model or os.environ.get('OLLAMA_MODEL', 'llama3.2:3b')
@@ -159,6 +161,17 @@ class SQLSystem:
         
         return True, sql_query
 
+    def _get_fallback_links(self, query: str) -> str:
+        """Return topic-relevant links even when SQL generation fails."""
+        q = query.lower()
+        if any(k in q for k in ['placed', 'placement', 'package', 'company', 'recruit']):
+            return "\n\n⚠ I couldn't query the specific data right now. You may find what you need here:\n- [Placement Cell](https://tkrcet.ac.in/placement/)"
+        if any(k in q for k in ['fee', 'payment', 'cost']):
+            return "\n\n⚠ I couldn't query fees right now. Please see:\n- [Fee Details](https://tkrcet.ac.in/fees-structure/)"
+        if any(k in q for k in ['result', 'exam', 'marks', 'score']):
+            return "\n\n⚠ I couldn't query that right now. Check results at:\n- [Exam Branch](https://tkrcet.ac.in/exam-branch/)"
+        return "\n\n⚠ I couldn't query the database right now. Visit [TKRCET](https://tkrcet.ac.in/) for more info."
+
     def _generate_sql(self, query):
         """Generate SQL query using LLM"""
         print(f"  [SQL] Generating SQL for: {query}")
@@ -202,7 +215,7 @@ SQL:"""
                     "stream": False,
                     "options": {"temperature": 0.0} # Deterministic
                 },
-                timeout=30
+                timeout=45  # Increased from 30 to 45s for slow local machines
             )
             if response.status_code == 200:
                 sql = response.json().get('response', '').strip()
@@ -270,7 +283,100 @@ SQL:"""
                 return response
             except Exception as e:
                 return f"Error fetching company data: {e}"
+
+        # Special case: placements by year — "how many students placed in 2024?"
+        year_match = re.search(r'\b(20\d{2})\b', query_lower)
+        if year_match and any(kw in query_lower for kw in ['placed', 'placement', 'got job', 'recruited', 'how many']):
+            year = int(year_match.group(1))
+            try:
+                df_total = pd.read_sql_query(
+                    f"SELECT COUNT(*) as total FROM students WHERE `PASSED YEAR` = {year}",
+                    self.conn
+                )
+                df_placed = pd.read_sql_query(
+                    f"""SELECT COUNT(*) as placed FROM students
+                       WHERE `PASSED YEAR` = {year}
+                       AND `COMPANY PLACED` IS NOT NULL
+                       AND `COMPANY PLACED` != 'Not Placed'
+                       AND `COMPANY PLACED` != ''""",
+                    self.conn
+                )
+                total = df_total.iloc[0]['total']
+                placed = df_placed.iloc[0]['placed']
+                if total == 0:
+                    return f"No student data found for the year {year}."
+                rate = round((placed / total) * 100, 1) if total > 0 else 0
+                return (
+                    f"**Placement Statistics for {year}:**\n"
+                    f"\n• Total Students: {total}"
+                    f"\n• Students Placed: {placed}"
+                    f"\n• Placement Rate: {rate}%"
+                    f"\n\n- [Placement Cell](https://tkrcet.ac.in/placement/)"
+                )
+            except Exception as e:
+                return f"Error fetching year-wise placement data: {e}"
+
+        # Special case: highest / max package query
+        if any(kw in query_lower for kw in ['highest package', 'max package', 'maximum package', 'highest salary', 'top package', 'highest ctc']):
+            try:
+                df = pd.read_sql_query(
+                    """SELECT NAME, BRANCH, "COMPANY PLACED", "PACKAGE"
+                       FROM students
+                       WHERE "PACKAGE" IS NOT NULL AND "PACKAGE" != '' AND "PACKAGE" != '0'
+                       ORDER BY CAST(REPLACE(REPLACE("PACKAGE", 'LPA', ''), ' ', '') AS REAL) DESC
+                       LIMIT 1""",
+                    self.conn
+                )
+                if len(df) == 0:
+                    return "Package data is not available in the database."
+                row = df.iloc[0]
+                return (
+                    f"🏆 **Highest Package:**\n"
+                    f"• **Name:** {row.get('NAME', 'N/A')}\n"
+                    f"• **Branch:** {row.get('BRANCH', 'N/A')}\n"
+                    f"• **Company:** {row.get('COMPANY PLACED', 'N/A')}\n"
+                    f"• **Package:** {row.get('PACKAGE', 'N/A')}\n"
+                    f"\n_(Individual data shared with permission. Contact admin for verification.)_"
+                )
+            except Exception as e:
+                # Fallback: just return count of placed students with any package info
+                return f"Package details are not available in structured form. Contact the Placement Cell for more information.\n\n- [Placement Cell](https://tkrcet.ac.in/placement/)"
         
+        # Special case: how many X students placed in SPECIFIC company
+        # e.g. "how many cse students placed in jbm group?"
+        company_match = re.search(
+            r'(?:placed in|got placed in|students? in|placed at)\s+(.+?)(?:\?|$|in \d{4})',
+            query_lower
+        )
+        branch_in_query = None
+        for alias, code in [
+            ('cse', 'CSE'), ('ece', 'ECE'), ('eee', 'EEE'), ('it', 'IT'),
+            ('mba', 'MBA'), ('civil', 'CE'), ('mech', 'ME'), ('data science', 'CSE-DS'),
+            ('aiml', 'CSE-AIML'), ('csd', 'CSE-DS'), ('csm', 'CSM')
+        ]:
+            if alias in query_lower:
+                branch_in_query = code
+                break
+        
+        if company_match and branch_in_query:
+            company_name = company_match.group(1).strip().rstrip('?').strip()
+            try:
+                df = pd.read_sql_query(
+                    f"""SELECT COUNT(*) as count FROM students
+                       WHERE UPPER(BRANCH) = '{branch_in_query}'
+                       AND LOWER("COMPANY PLACED") LIKE '%{company_name.lower()}%'""",
+                    self.conn
+                )
+                count = df.iloc[0]['count']
+                if count == 0:
+                    return f"No {branch_in_query} students found placed in a company matching '{company_name}'."
+                return (
+                    f"• **{count} {branch_in_query} student{'s' if count != 1 else ''}** placed in **{company_name.title()}**\n"
+                    f"\n- [Placement Cell](https://tkrcet.ac.in/placement/)"
+                )
+            except Exception as e:
+                return f"Error querying placement data: {e}"
+
         # Extract entities from query
         entities = self.extract_entities(query)
         
@@ -279,7 +385,7 @@ SQL:"""
             print("  [SQL] No entities found, trying Text-to-SQL...")
             sql_query = self._generate_sql(query)
             if not sql_query:
-                 return "I couldn't understand the student query. Please specify student ID, name, department, or conditions."
+                return "I couldn't understand the student query. Please specify student ID, name, department, or conditions." + self._get_fallback_links(query)
             # Post-validate LLM-generated SQL
             is_safe, result = self._validate_sql(sql_query)
             if not is_safe:

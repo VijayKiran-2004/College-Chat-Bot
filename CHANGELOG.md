@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.7.2] - March 2026
+
+### Fixed
+- **Codebase Compactness**: Removed legacy `scripts/prepare_data.py` and redundant debug/backup files.
+- **Documentation Sync**: Synchronized all documentation (README, Quick Start, Codebase Reference) with the latest codebase state.
+- **Restoration**: Restored the full 607-prompt test suite in `tests/all_prompts.json` as per user request.
+
+## [3.7.1] - March 2026
+
+### Fixed
+- **Documentation Accuracy**: Corrected `docs/vector_db.md` and `docs/rag.md` to accurately reference **Ollama (`llama3.2:3b`)** for RAG generation.
+- **Clarification**: Distinguished between the **Scraper pipeline** (which uses Groq `llama-3.1-8b-instant`) and the **RAG generation pipeline** (which uses local Ollama).
+
+## [3.7.0] - March 2026
+
+### Added
+- **Unified Brain (Deep Reasoning Chain)**: Implemented `DeepReasoningChain` using LangChain Agents to orchestrate complex queries between RAG and SQL systems.
+- **Expanded Test Suite**: Increased `tests/prompt_test.py` to support **607 unique prompts** (200 simple, 200 SQL, 207 complex) loaded dynamically from `tests/all_prompts.json`.
+- **Scrapling Stealth Engine**: Replaced the legacy Playwright scraper with the Scrapling engine for advanced bot evasion.
+- **Response Completeness Logic**: Enhanced generator prompts to ensure responses have a "natural end" and don't cut off mid-sentence, even near token limits.
+
+### Fixed
+- **"Chairmen" Query Error**: Standardized administrative title formatting in `KnowledgeBase.py` to fix specific person-lookup failures.
+- **Link Duplication**: Refactored `generator.py` to remove redundant "Source Links" and unify on top-level "Quick Links".
+- **System Robustness**: 
+  - Fixed absolute path handling for `students.db` in `SQLSystem`.
+  - Added recursion guards to `DeepReasoningChain` to prevent infinite loops on agent failure.
+  - Fixed missing `Path` imports causing 503 errors during backend startup.
+
 ## [3.6.0] - March 2026
 
 ### Added
@@ -166,5 +195,5 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-**Current Version**: 3.5.0  
+**Current Version**: 3.7.2  
 **Status**: Production Ready ✅

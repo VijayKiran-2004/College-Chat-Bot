@@ -20,14 +20,21 @@ if sys.platform.startswith('win'):
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-# Configuration
-SCRAPED_DATA = "app/database/vectordb/scraped_data.jsonl"
-FAQ_DATA = "data/rawdata/faq_rows.json"
-OUTPUT_FILE = "app/database/vectordb/unified_vectors.json"
+# Always anchor paths relative to THIS script, not the cwd
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Configuration — absolute paths
+# Primary source (from prepare_data.py)
+SCRAPED_JSONL = str(_PROJECT_ROOT / "app" / "database" / "vectordb" / "scraped_data.jsonl")
+# Backup source (direct from scraper)
+SCRAPED_MASTER = str(_PROJECT_ROOT / "data" / "scraped_data" / "all_results.json")
+
+FAQ_DATA     = str(_PROJECT_ROOT / "data" / "rawdata" / "faq_rows.json")
+OUTPUT_FILE  = str(_PROJECT_ROOT / "data" / "chunks" / "unified_vectors.json")
 
 # Chunking parameters
-MAX_CHUNK_SIZE = 500  # characters per chunk
-CHUNK_OVERLAP = 50    # overlap for context continuity
+MAX_CHUNK_SIZE = 1000  # characters per chunk
+CHUNK_OVERLAP = 150    # overlap for context continuity
 
 
 def clean_text(text):
@@ -70,22 +77,60 @@ def chunk_text(text, max_size=MAX_CHUNK_SIZE, overlap=CHUNK_OVERLAP):
 
 def load_scraped_data():
     """Load documents from scraped_data.jsonl"""
-    documents = []
-    if not os.path.exists(SCRAPED_DATA):
-        print(f"  ⚠ Scraped data not found: {SCRAPED_DATA}")
-        return documents
+    # 1. Load Scraped Data
+    processed_docs = []
     
-    with open(SCRAPED_DATA, 'r', encoding='utf-8') as f:
-        for line in f:
-            if line.strip():
-                try:
-                    doc = json.loads(line)
-                    documents.append(doc)
-                except json.JSONDecodeError:
-                    continue
+    if os.path.exists(SCRAPED_JSONL):
+        print(f"Loading scraped data from JSONL...")
+        with open(SCRAPED_JSONL, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        doc = json.loads(line)
+                        processed_docs.append(doc)
+                    except json.JSONDecodeError:
+                        continue
+    elif os.path.exists(SCRAPED_MASTER):
+        print(f"Loading scraped data directly from Master JSON...")
+        try:
+            with open(SCRAPED_MASTER, 'r', encoding='utf-8') as f:
+                master_data = json.load(f)
+                
+            # Master data is a list of items: {"url": "...", "data": {"sections": [...]}}
+            if isinstance(master_data, list):
+                for item in master_data:
+                    url = item.get("url", "")
+                    data = item.get("data", {})
+                    sections = data.get("sections", [])
+                    
+                    content = ""
+                    for sec in sections:
+                        heading = sec.get("title", "") or sec.get("heading", "")
+                        raw_sec_content = sec.get("content", "")
+                        
+                        # Handle content being a list or string
+                        if isinstance(raw_sec_content, list):
+                            sec_text = "\n".join([str(x) for x in raw_sec_content])
+                        else:
+                            sec_text = str(raw_sec_content)
+                            
+                        content += f"## {heading}\n{sec_text}\n\n"
+                    
+                    if content.strip():
+                        processed_docs.append({
+                            "title": url,  # Use URL as title if no specific page title
+                            "source": url,
+                            "contents": content
+                        })
+            else:
+                print(f"  ⚠ Unexpected format in {SCRAPED_MASTER} (expected list)")
+        except Exception as e:
+            print(f"  ⚠ Error reading {SCRAPED_MASTER}: {e}")
+    else:
+        print(f"  ⚠ Scraped data not found in {SCRAPED_JSONL} or {SCRAPED_MASTER}")
     
-    print(f"  ✓ Loaded {len(documents)} scraped documents")
-    return documents
+    print(f"  ✓ Loaded {len(processed_docs)} scraped documents")
+    return processed_docs
 
 
 def load_faq_data():
@@ -157,8 +202,18 @@ def main():
                 continue
             seen_texts.add(chunk_hash)
             
+            # --- Title-Anchored Chunk ---
+            # Prepend a short title tag so the embedding captures page context
+            short_title = title[:60] if title and title != url else ""
+            if short_title and short_title.lower() not in chunk[:80].lower():
+                anchored_chunk = f"[TKRCET | {short_title}]\n{chunk}"
+            elif url:
+                anchored_chunk = f"[TKRCET | {url}]\n{chunk}"
+            else:
+                anchored_chunk = chunk
+            
             unified_vectors.append({
-                "text": chunk,
+                "text": anchored_chunk,
                 "source": source,
                 "url": url,
                 "metadata": {

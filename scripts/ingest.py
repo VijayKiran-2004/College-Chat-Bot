@@ -99,8 +99,8 @@ def main():
         print(f"⚠ Warning: Could not initialize LLM ({e}). Proceeding with raw text.")
         llm = None
 
-    # 4. Semantic Chunking & Processing
-    print("Processing and Chunking documents (Semantic)...")
+    # 4. Hybrid Chunking (Stage 2: Deep Semantic)
+    print("Processing and Chunking documents (Stage 2: Deep Semantic)...")
     
     # Initialize Embedding Model for Chunker (LangChain compatible)
     chunker_embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")

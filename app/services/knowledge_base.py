@@ -113,24 +113,31 @@ class KnowledgeBase:
         if len(self.kb_entries) == 0:
             return None
             
-        query_lower = query.lower()
-        
-        if any(keyword in query_lower for keyword in ['principal', 'hod', 'dean', 'courses', 'timings', 'fees']):
-            print(f"  ⚡ [Fast Track] Keywords found in: '{query}'")
+        query_lower = query.lower().strip()
 
+        # 1. SPECIFIC KEYWORD MATCHES (High Priority)
+        # Society / Management
+        if any(word in query_lower for word in ['chairman', 'chairmen', "chairman's"]):
+            return f"The Chairman of TKRCET is {self.data['society']['chairman']}."
+            
+        if 'secretary' in query_lower:
+            return f"The Secretary of TKRCET is {self.data['society']['secretary']}."
+
+        # Personnel / Administration
         if 'principal' in query_lower and 'vice' not in query_lower:
-            return f"Principal: {self.data['personnel']['principal']}"
+            return f"The Principal of TKRCET is {self.data['personnel']['principal']}."
 
         if 'vice principal' in query_lower:
-            return f"Vice Principal: {self.data['personnel']['vice_principal']}"
-
-        if 'secretary' in query_lower:
-            return f"Secretary: {self.data['personnel']['secretary']}"
-        if 'chairman' in query_lower:
-            return f"Chairman: {self.data['society']['chairman']}"
-
+            return f"The Vice Principal of TKRCET is {self.data['personnel']['vice_principal']}."
+            
         if 'dean' in query_lower and 'academic' in query_lower:
-             return f"Dean Academics: {self.data['personnel']['dean_academics']}"
+             return f"The Dean Academics of TKRCET is {self.data['personnel']['dean_academics']}."
+
+        # Full college name
+        if any(p in query_lower for p in ['full name', 'full form', 'what does tkrcet stand', 'expand tkrcet', 'college name']):
+            full_name = self.data.get('history', {}).get('full_name', 
+                'Teegala Krishna Reddy College of Engineering and Technology (TKRCET)')
+            return f"**Full Name of College:** {full_name}"
 
         if 'hod' in query_lower:
             deps = {
@@ -164,7 +171,7 @@ class KnowledgeBase:
             hours = self.data['timings']['working_hours']
             return f"**College Timings:**\n\n🕐 {hours}\n\n**Lunch Break:** {lunch}"
         
-        if any(word in query_lower for word in ['address', 'location', 'where is', 'where are']):
+        if any(word in query_lower for word in ['address', 'location', 'where is', 'where are', 'where the college', 'where is tkrcet', 'situated', 'located']):
             h = self.data['history']
             return f"**TKRCET Location:**\n\n📍 {h['location']}\n\n**Established:** {h['established']}\n**Affiliation:** {h['affiliation']}\n**Status:** {h['status']}\n**Campus Size:** {h['campus_size']}"
         
@@ -172,10 +179,47 @@ class KnowledgeBase:
             f = self.data['fees']
             note = f.get('note', 'Fees are subject to change as per government regulations.')
             return f"**Fee Structure (Approximate):**\n\n• **B.Tech:** {f['btech']}\n• **M.Tech:** {f['mtech']}\n• **MBA:** {f['mba']}\n\n• **Hostel:** {f['hostel']}\n• **Transport:** {f['transport']}\n\n_{note}_"
+
+        # --- Exam / Semester / Supply fee ---
+        if any(w in query_lower for w in ['exam fee', 'semester fee', 'sem fee', 'supply fee', 'examination fee']):
+            ss = self.data.get('student_services', {})
+            return ss.get('exam_fee_payment', 'Please contact the Accounts Department for exam fee payment details.')
+
+        # --- Tuition / Admission fee payment procedure ---
+        if 'fee' in query_lower and any(w in query_lower for w in ['pay', 'payment', 'submit', 'how to pay', 'how do i pay']):
+            ss = self.data.get('student_services', {})
+            return ss.get('fee_payment', 'Please contact the Accounts Department for fee payment details.')
+
+        # --- Transport fee ---
+        if any(w in query_lower for w in ['transport fee', 'bus fee', 'transportation fee']):
+            ss = self.data.get('student_services', {})
+            return ss.get('transportation_fee', self.data['facilities']['transport']['contact'])
+
+        # --- Hostel fee ---
+        if any(w in query_lower for w in ['hostel fee', 'accommodation fee']):
+            ss = self.data.get('student_services', {})
+            return ss.get('hostel_fee', 'Please contact the Hostel Office for fee payment details.')
+
+        # --- Bonafide Certificate ---
+        if any(w in query_lower for w in ['bonafide', 'bona fide', 'bonafide certificate', 'bonafide letter']):
+            ss = self.data.get('student_services', {})
+            return ss.get('bonafide_certificate', 'Please visit the college office to apply for a bonafide certificate.')
+
+        # --- Scholarship ---
+        if any(w in query_lower for w in ['scholarship', 'fellowships', 'stipend', 'financial aid']):
+            ss = self.data.get('student_services', {})
+            return ss.get('scholarship', 'Please visit the scholarship window in the main block for details.')
         
-        if 'fee' in query_lower and ('pay' in query_lower or 'payment' in query_lower):
-            return "**Fee Payment:**\n\nFees can be paid at the Accounts Department in the Administrative Block. Payment modes include:\n• Cash\n• Demand Draft\n• Online Transfer\n\nFor detailed payment procedures, please contact the Accounts Department or visit the college office."
-        
+        if any(word in query_lower for word in ['library head', 'head of library', 'librarian', 'library in charge', 'library staff']):
+            lib_head = self.data.get('personnel', {}).get('library_head', None)
+            if lib_head:
+                return f"**Head of Library (Librarian):** {lib_head}"
+
+        if any(word in query_lower for word in ['placement head', 'head of placement', 'placement officer', 'tpo', 't&p', 'placement cell head', 'placement in charge']):
+            ph = self.data.get('personnel', {}).get('placement_head', None)
+            if ph:
+                return f"**Training & Placement Officer:** {ph}"
+
         if any(word in query_lower for word in ['transport', 'bus', 'buses', 'route']):
             t = self.data['facilities']['transport']
             return f"**College Transport:**\n\n{t['details']}\n\n**Routes:** {t['routes']}\n\n{t['contact']}"
@@ -257,10 +301,14 @@ class KnowledgeBase:
             nss = self.data['activities']['nss']
             return f"**{nss['name']}**\n\n{nss['description']}\n\n**Motto:** \"{nss['motto']}\""
         
-        elif category == 'society' or key == 'colleges':
-            s = self.data['society']
-            colleges = "\n".join([f"{i+1}. {c}" for i, c in enumerate(s['colleges'])])
-            return f"The **{s['name']}** manages the following institutions:\n\n{colleges}"
+        # Special handling for society (Chairman/Secretary)
+        if category == 'society':
+            if 'chairman' in key.lower():
+                return f"The Chairman of TKRCET is {self.data['society']['chairman']}."
+            if 'secretary' in key.lower():
+                return f"The Secretary of TKRCET is {self.data['society']['secretary']}."
+            # Fallback for general society info
+            return f"TKRCET is managed by the Teegala Krishna Reddy Educational Society. Key members include Chairman {self.data['society']['chairman']} and Secretary {self.data['society']['secretary']}."
         
         elif category == 'courses':
             ug = ', '.join(self.data['courses']['ug'])

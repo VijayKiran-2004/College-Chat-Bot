@@ -6,6 +6,7 @@ Refactored to orchestrate independent components (KnowledgeBase, LinkManager, Re
 import sys
 import os
 import re
+import json
 from pathlib import Path
 
 # Fix Windows encoding
@@ -21,6 +22,40 @@ from app.services.link_manager import LinkManager
 from app.services.retriever import Retriever
 from app.services.generator import Generator
 from app.services.embedding_service import get_embedding_model
+
+# ---------------------------------------------------------------------------
+# Query Expansion: College-specific synonyms to improve retrieval coverage
+# ---------------------------------------------------------------------------
+_QUERY_SYNONYMS = {
+    "result":     ["result", "marks", "grade", "exam result", "score"],
+    "results":    ["results", "marks", "grades", "exam results", "scores"],
+    "attendance": ["attendance", "present", "absent", "shortage"],
+    "fee":        ["fee", "fees", "cost", "payment", "charges"],
+    "hostel":     ["hostel", "accommodation", "room", "residence"],
+    "bus":        ["bus", "transport", "route", "vehicle"],
+    "placement":  ["placement", "placed", "job", "company", "recruit"],
+    "library":    ["library", "books", "reading room", "digital library"],
+    "scholarship":["scholarship", "stipend", "financial aid", "eamcet rank"],
+    "sports":     ["sports", "games", "ground", "athletic"],
+    "exam":       ["exam", "examination", "test", "internal", "external"],
+    "internship": ["internship", "training", "industrial visit", "in-plant"],
+}
+
+def _expand_query(query: str) -> str:
+    """Expand query with domain synonyms to improve semantic retrieval."""
+    query_lower = query.lower()
+    extras = []
+    for term, synonyms in _QUERY_SYNONYMS.items():
+        if term in query_lower:
+            # Add synonyms not already in the query
+            for syn in synonyms:
+                if syn not in query_lower:
+                    extras.append(syn)
+            break  # Only expand the first matched term to avoid noise
+    if extras:
+        expanded = query + " " + " ".join(extras[:3])  # max 3 extras
+        return expanded
+    return query
 
 class UltraRAGSystem:
     """
@@ -41,6 +76,7 @@ class UltraRAGSystem:
         self.project_root = Path(__file__).resolve().parent.parent.parent
         self.corpus_path = corpus_path or str(self.project_root / 'data/chunks/corpus_ultrarag.jsonl')
         self.kb_path = str(self.project_root / 'data/knowledge_base.json')
+        self._cache_path = str(self.project_root / 'data/chunks/response_cache.json')
         
         # Initialize sub-components
         if semantic_model is None:
@@ -54,10 +90,47 @@ class UltraRAGSystem:
         self.retriever = Retriever(self.project_root, self.corpus_path)
         self.generator = Generator(self.ollama_model, self.ollama_url)
         
-        # Response cache
-        self.response_cache = {}
+        # Persistent cache: load from disk if available
+        self.response_cache = self._load_cache()
+        print(f"  [Cache] Loaded {len(self.response_cache)} cached responses from disk")
+        
+        # Context carry-forward: last retrieved context snippets for follow-ups
+        self._last_context: list = []
+        self._last_docs: list = []
         
         print("✓ UltraRAGSystem ready!\n")
+
+    def _load_cache(self) -> dict:
+        """Load persistent cache from disk."""
+        try:
+            if os.path.exists(self._cache_path):
+                with open(self._cache_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+
+    def _save_cache(self):
+        """Save cache to disk (fire-and-forget, errors are non-fatal)."""
+        try:
+            os.makedirs(os.path.dirname(self._cache_path), exist_ok=True)
+            with open(self._cache_path, 'w', encoding='utf-8') as f:
+                json.dump(self.response_cache, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"  [Cache] Could not save cache: {e}")
+
+    def _is_followup(self, query: str) -> bool:
+        """Detect if a short query is likely a follow-up to the previous one."""
+        words = query.strip().split()
+        if len(words) > 7:
+            return False
+        followup_starters = [
+            "what about", "and", "also", "what is his", "what is her",
+            "tell me more", "more details", "elaborate", "explain more",
+            "how about", "who is he", "who is she", "what else"
+        ]
+        q_lower = query.lower().strip()
+        return any(q_lower.startswith(s) for s in followup_starters)
 
     def _stream_call(self, query, is_greeting=False, language='en', temperature=0.2):
         """Streaming generator entry point for queries"""
@@ -88,8 +161,17 @@ class UltraRAGSystem:
         if kb_fact:
             metadata["source"] = "Knowledge Base"
             
-        # Retrieve Documents
-        docs = self.retriever.retrieve(query, top_k=2)
+        # Query expansion for better retrieval
+        search_query = _expand_query(query)
+        
+        # Context carry-forward for short follow-up queries
+        if self._is_followup(query) and self._last_docs:
+            print("  [Context] Detected follow-up — reusing previous context")
+            docs = self._last_docs
+        else:
+            docs = self.retriever.retrieve(search_query, top_k=4)
+            if docs:
+                self._last_docs = docs
         
         confidence = 0
         if docs:
@@ -108,7 +190,7 @@ class UltraRAGSystem:
         # Stream Generation (Integrating KB Fact as a primary source if found)
         for chunk in self.generator.generate(
             query=query, 
-            docs=docs, 
+            docs=docs[:2],  # Send top 2 to LLM (best after re-ranking)
             kb_context=kb_context, 
             kb_fact=kb_fact,
             links=links, 
@@ -154,9 +236,18 @@ class UltraRAGSystem:
         # Check Knowledge Base for raw facts
         kb_fact = self.kb.check(query)
         source = "Knowledge Base" if kb_fact else "RAG"
-            
-        # Retrieve Documents
-        docs = self.retriever.retrieve(query, top_k=2)
+        
+        # Query expansion for better retrieval
+        search_query = _expand_query(query)
+        
+        # Context carry-forward for short follow-up queries
+        if self._is_followup(query) and self._last_docs:
+            print("  [Context] Detected follow-up — reusing previous context")
+            docs = self._last_docs
+        else:
+            docs = self.retriever.retrieve(search_query, top_k=4)
+            if docs:
+                self._last_docs = docs
         
         confidence = 0
         if docs:
@@ -165,11 +256,14 @@ class UltraRAGSystem:
             
         links = self.link_manager.extract_relevant_links(docs, query)
         kb_context = self.kb.format_context()
+        context_snippets = [d.get("contents", "") for d in docs[:3]]
+        if kb_fact:
+            context_snippets.insert(0, f"KNOWLEDGE BASE FACT: {kb_fact}")
         
-        # Generation
+        # Generation — send top 2 docs (best after re-ranking)
         response = self.generator.generate(
             query=query, 
-            docs=docs, 
+            docs=docs[:2],
             kb_context=kb_context, 
             kb_fact=kb_fact,
             links=links, 
@@ -178,13 +272,21 @@ class UltraRAGSystem:
             temperature=temperature
         )
         
-        # Cache factual responses
+        # Persist cache to disk (trim if too large)
         self.response_cache[query_key] = response
-        if len(self.response_cache) > 50:
-            self.response_cache.pop(next(iter(self.response_cache)))
+        if len(self.response_cache) > 200:
+            oldest_keys = list(self.response_cache.keys())[:50]
+            for k in oldest_keys:
+                del self.response_cache[k]
+        self._save_cache()
 
         if return_dict:
-            return {"response": response, "source": source, "confidence": confidence}
+            return {
+                "response": response, 
+                "source": source, 
+                "confidence": confidence,
+                "context": context_snippets
+            }
         return response
 
 

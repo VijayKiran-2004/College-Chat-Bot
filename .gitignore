@@ -172,8 +172,18 @@ __marimo__/
 *.db
 *.index
 *.pkl
-*.jsonl
+app/database/students.db
+
+# Vector DB generated files (rebuilt locally by ingest.py)
 app/database/vectordb/ultrarag_faiss.index
 app/database/vectordb/ultrarag_bm25.pkl
 app/database/vectordb/corpus_ultrarag.jsonl
-app/database/students.db
+app/database/vectordb/chroma/
+
+# Generated chunk/cache files (rebuilt by ingest.py)
+data/chunks/corpus_ultrarag.jsonl
+data/chunks/response_cache.json
+
+# Runtime logs (personal to each user, not for teammates)
+logs/response_log.xlsx
+logs/response_log_*.xlsx

@@ -22,8 +22,9 @@ College Buddy is an intelligent conversational AI designed to assist students, f
 - **Embeddings**: all-MiniLM-L6-v2
 - **Vector DB**: ChromaDB (Semantic Search)
 - **Structured DB**: SQLite + Pandas (for Student Data)
-- **Routing**: Gemma 3 1B (intent routing) + Semantic Similarity (embeddings-based fallback)
+- **Routing**: Semantic Similarity via `all-MiniLM-L6-v2` embeddings (fast, no extra model needed)
 - **SQL Safety**: Built-in safety filter blocks destructive queries (DROP, DELETE, etc.)
+- **Scraping**: Scrapling (Anti-bot Engine) + Groq (LLM Parsing)
 - **Backend**: FastAPI with SSE streaming
 - **Frontend**: HTML/CSS/JS with Tailwind CSS, Marked.js
 
@@ -35,6 +36,7 @@ College Buddy is an intelligent conversational AI designed to assist students, f
   - [Ollama](https://ollama.com/) (Required)
   - [Git](https://git-scm.com/)
   - **Google Chrome** or **Chromium** (Required for Data Scraping)
+- **Scrapling Binaries**: `scrapling install` (Required within `.venv`)
 
 ## Setup Instructions
 
@@ -75,37 +77,45 @@ pip install -r requirements.txt
    ollama pull llama3.2:3b
    ollama pull gemma3:1b
    ```
+   > **Note**: `llama3.2:3b` is the main answer model. `gemma3:1b` is only used by `tests/prompt_test.py` as a quality evaluation judge — it's not required to run the chatbot.
 3. Keep Ollama running in the background (`ollama serve`).
 
 ### 5. Data Setup (Crucial Step)
 Since raw data is not checked into git, you must generate it locally:
 
-**A. Scrape College Data (Web)**
+### 5. Build the Knowledge Corpus (4 steps, run in order)
+
+> [!IMPORTANT]
+> These steps must be run **in this exact order**. Each step produces the files the next step needs.
+
+**Step 1 — Scrape college data from the web:**
 ```bash
 python scripts/tkrcet_scraper.py
 ```
-*Advanced AI-powered scraper using Playwright and Groq API. Extracts 80+ pages with structured semantic cleaning. Requires Chrome.*
+*Requires: `.env` file with `GROQ_API_KEY`, and Scrapling browsers installed. Produces: `data/scraped_data/outputs/*.json`*
 
-**B. Generate Unified Vectors**
+> [!NOTE]
+> If you encounter **403 Forbidden** errors, the college firewall has temporarily flagged your IP. Wait 20-30 minutes for the block to reset. The new Scrapling engine includes randomized delays to minimize this risk.
+
+**Step 2 — Chunk and prepare vectors:**
 ```bash
 python scripts/generate_vectors.py
 ```
-*Chunks and combines scraped data + FAQ data into `unified_vectors.json`.*
+*Produces: `data/chunks/unified_vectors.json`*
 
-### 6. Ingest Data (Vector DB)
-Now, process the data into the Vector Database:
-```bash
-python scripts/ingest.py
-```
-*(This populates the `college_data` ChromaDB collection)*
-
-**Generate Knowledge Corpus:**
+**Step 3 — Convert to corpus format:**
 ```bash
 python scripts/corpus_converter.py
 ```
-*(Generates the JSONL corpus required for UltraRAG)*
+*Produces: `data/chunks/corpus_ultrarag.jsonl` (required by the retriever)*
 
-### 7. Run the Chatbot
+**Step 4 — Ingest into Vector Database:**
+```bash
+python scripts/ingest.py
+```
+*Populates the `college_data` ChromaDB collection.*
+
+### 6. Run the Chatbot
 
 **Option A: Backend API Server (Recommended)**
 Start the REST API server to power frontend applications:
@@ -216,16 +226,15 @@ college-buddy/
 │   │   └── vectordb/              # ChromaDB Storage + Corpus
 │
 ├── scripts/
-│   ├── tkrcet_scraper.py      # Advanced Web scraper (Playwright + Groq)
+│   ├── tkrcet_scraper.py      # Advanced Stealth Scraper (Scrapling + Groq)
 │   ├── tkrcet_links.txt       # Unified link list for scraping
-│   ├── prepare_data.py        # Flattens nested JSON into RAG format
 │   ├── generate_vectors.py    # Unified vectors generator (chunking)
 │   ├── corpus_converter.py    # JSON → JSONL converter
 │   └── ingest.py              # ChromaDB ingestion
 │
 ├── tests/
-│   ├── prompt_test.py         # Evaluation suite — runs prompts, scores metrics,
-│   │                          # saves results incrementally to Evaluation sheet
+│   ├── prompt_test.py         # Evaluation suite — runs 600+ prompts from all_prompts.json
+│   ├── all_prompts.json       # Central test repository (Simple, SQL, Complex)
 │   └── ...                    # Other unit & integration tests
 │
 ├── tools/
@@ -270,52 +279,71 @@ To generate the metrics reference PDF: `python tools/generate_metrics_pdf.py`
 
 ## Team
 - **Vijay Kiran**: System Architecture
-- **Sanjana**: Data Pipeline
-- **Subhash Chandra**: Database
-- **Sathish**: Vector Optimization
-- **Mokshagna**: LLM Integration
-- **Vishnuvardhan**: Prompt Engineering
-- **Praneetha**: Testing
+- **Sanjana**: Data Pipeline / Code Review
+- **Subhash Chandra**: Database / API's
+- **Praneetha**: Testing / Code Review
+- **Sathish**: Vector Optimization / Hosting
+- **Mokshagna**: LLM Integration / Presentation
+- **Vishnuvardhan**: Prompt Engineering / Testing
 
 ---
 
 ## 🤝 Teammate Handoff / Fresh Start
 
-If you just received this codebase and want to rebuild the system from scratch (clear data and re-index), follow these steps:
+If you just received this codebase and want to rebuild the system from scratch:
 
-### 1. Reset everything
+### Step 1 — Setup environment
 ```bash
-# 1. Clear the Vector Database (persistent indices)
-python scripts/clear_vectordb.py
-
-# 2. Reset the Conversation Logs (archives old ones)
-python tools/refresh_logs.py
+git clone https://github.com/VijayKiran-2004/College-Chat-Bot.git
+cd College-Chat-Bot
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1   # Windows
+pip install -r requirements.txt
 ```
 
-### 2. Populate the Knowledge Base
+### Step 2 — Configure API Key
 ```bash
-# 3. Scrape fresh data from TKRCET website
-# (Requires Playwright: npx playwright install)
+# Copy the example and fill in your Groq API key
+copy .env.example .env
+# Open .env and set: GROQ_API_KEY=your_actual_key_here
+```
+> Get a free key at [console.groq.com](https://console.groq.com)
+
+### Step 3 — Pull Ollama models
+```bash
+ollama pull llama3.2:3b
+ollama pull gemma3:1b   # only needed for tests/prompt_test.py (evaluation)
+```
+Keep Ollama running: `ollama serve`
+
+### Step 4 — Build the knowledge base (run in order)
+```bash
+# 1. Scrape college data
 python scripts/tkrcet_scraper.py
 
-# 4. Ingest and Index the data
-# (Builds the ChromaDB and FAISS search indices)
+# 2. Chunk and prepare vectors
+python scripts/generate_vectors.py
+
+# 3. Convert to retrieval corpus format
+python scripts/corpus_converter.py
+
+# 4. Ingest into Vector Database
 python scripts/ingest.py
 ```
 
-### 3. Run and Verify
+### Step 5 — Run and verify
 ```bash
-# 5. Start the backend server
+# Start the backend
 python backend.py
 
-# 6. Open frontend/index.html in your browser
-# 7. (Optional) Run automated quality evaluation
+# Open frontend/index.html in your browser
+# (Optional) Run quality evaluation
 python tests/prompt_test.py
 ```
 
 > [!TIP]
-> Make sure **Ollama** is running in the background with `llama3.2:3b` pulled!
+> Make sure **Ollama** is running in the background with `ollama serve` before starting the backend!
 
 ---
-**Version**: 3.6.0 (Logging & Evaluation Refinement)
+**Version**: 3.7.2 (Codebase Cleanup & Sync)
 **Status**: Production Ready ✅

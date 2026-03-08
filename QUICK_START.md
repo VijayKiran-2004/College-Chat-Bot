@@ -1,36 +1,44 @@
-# Quick Start Guide - College Buddy v3.6
+# Quick Start Guide - College Buddy v3.7
 
-## 🚀 Get Started in 3 Steps
+---
 
-### Step 1: Install Dependencies
+## 🆕 Fresh Clone Setup (For Teammates)
 
-```bash
-# Activate virtual environment (if not already active)
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/Mac
+Follow these steps after cloning the repository for the first time:
 
-# Install requirements
+```powershell
+# 1. Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# 2. Install all dependencies
 pip install -r requirements.txt
+
+# 3. Set up your API key
+copy .env.example .env
+# Then open .env and fill in: GROQ_API_KEY=your_key_here
+# Get a free key at: https://console.groq.com/keys
+
+# 4. Build the vector database (one-time, ~2-5 mins)
+python scripts/ingest.py
+
+# 5. Start the server
+python backend.py
+# → Server runs at http://127.0.0.1:8000
+# → Open frontend/index.html in your browser
 ```
 
-### Step 2: Start Ollama
+> **No scraping needed!** All 97 scraped data files are already committed to the repo.
 
-```bash
-# Pull all models (first time only)
-ollama pull llama3.2:3b
-ollama pull gemma3:1b
+---
 
-# Ollama should auto-start, verify with:
-ollama ps
-```
+## 🚀 Already Set Up? Quick Start
 
-### Step 3: Run the Chatbot
-
-**Option A: Web Interface (Recommended)**
-```bash
+```powershell
+.venv\Scripts\activate
 python backend.py
 ```
-*Then open `frontend/index.html` in your browser. Server runs at `http://127.0.0.1:8000`*
+*Then open `frontend/index.html` in your browser.*
 
 ---
 
@@ -67,34 +75,29 @@ faculty, or other college-related topics.
 
 ## 🔧 Troubleshooting
 
-### Chatbot won't start
-```bash
-# Check if Ollama is running
-ollama ps
+### Backend won't start
+- Ensure `.env` file exists with a valid `GROQ_API_KEY`
+- Run `python scripts/ingest.py` first if vector indices are missing
 
-# If not, start it
-ollama serve
-```
+### Groq API 403 Error
+- Your ISP/hotspot may be blocked by Groq
+- **Fix:** Enable Cloudflare WARP (free VPN) → [1.1.1.1](https://1.1.1.1/)
 
-### Wrong answers or off-topic responses
-```bash
-# Re-run ingestion to refresh database
+### Wrong answers or stale data
+```powershell
+# Rebuild vector database from existing scraped data
 python scripts/ingest.py
-
-# Restart chatbot
 python backend.py
 ```
 
 ### Import errors
-```bash
-# Reinstall dependencies
+```powershell
 pip install -r requirements.txt --force-reinstall
 ```
 
-### Out of memory
-- Close other applications
-- The llama3.2:3b model uses ~2GB RAM
-- Consider using a smaller model if needed
+### Ingest fails with missing file
+- Ensure `data/scraped_data/outputs/` has JSON files (do a `git pull`)
+- Ensure `data/rawdata/faq_rows.json` and `data/knowledge_base.json` exist
 
 ---
 
@@ -110,7 +113,7 @@ python tools/refresh_logs.py
 ```bash
 python tests/prompt_test.py
 ```
-*Runs all test prompts, scores them across 8 quality metrics, and saves results incrementally to the Evaluation sheet. You can safely Ctrl+C — results up to that point are not lost.*
+*Runs all **607 test prompts** (Simple, SQL, Complex) from `tests/all_prompts.json`. Scores them across 8 quality metrics and saves results incrementally to the Evaluation sheet. You can safely Ctrl+C — results up to that point are not lost.*
 
 ### Inspect logs
 ```bash
@@ -135,13 +138,12 @@ python inspect_logs.py
 ## 📲 What's New
 
 
-### 📋 Logging & Evaluation Refinement — v3.6 (March 2026)
-- ✅ Production sheet simplified to 6 focused columns (Timestamp, Query, Response, Time Taken, Session, Source)
-- ✅ Evaluation sheet now records both **Latency (s)** (client round-trip) and **Server Time (s)** (pure backend time) side-by-side
-- ✅ `prompt_test.py` saves each result **immediately** after scoring — no data loss on interruption
-- ✅ New `tools/generate_metrics_pdf.py` generates a polished `logs/Metrics_Reference.pdf`
-- ✅ Greetings now bypass the full RAG pipeline for near-instant responses
-- ✅ `inspect_logs.py` fixed to display both Production and Evaluation sheets
+### 📋 Unified Brain & Enhanced Testing — v3.7 (March 2026)
+- ✅ **Deep Reasoning Chain**: Hybrid agent orchestrating complex RAG + SQL workflows.
+- ✅ **600+ Test Prompts**: Expanded test suite with diverse simple, structured, and complex queries.
+- ✅ **Response Completeness**: Commands LLM to provide "finished" responses even within limits.
+- ✅ **Initialization Fixes**: Resolved Path library and administrative title lookup issues.
+- ✅ New `logs/Metrics_Reference.pdf` auto-generated documentation.
 
 ### 🔗 Navigation Links (February 2026)
 - ✅ Clickable link chips below responses linking to relevant TKRCET website pages
@@ -179,10 +181,10 @@ Once the chatbot is running:
 
 ## 💡 Pro Tips
 
-1. **First run takes longer**: FAISS and BM25 indices are built on first run
-2. **Subsequent runs are instant**: Indices are cached
-3. **Keep Ollama running**: Chatbot needs Ollama service active
-5. **Use specific queries**: More specific questions get better answers
+1. **First run takes longer**: FAISS and BM25 indices are built on first run (~2 min)
+2. **Subsequent runs are instant**: Indices are cached on disk
+3. **Use specific queries**: More specific questions get better answers
+4. **Re-scrape a single page:** `python scripts/rescrape_single.py "<url>"` then re-run `ingest.py`
 
 ---
 
@@ -195,17 +197,13 @@ Check if everything is working:
 status
 ```
 
-**Expected Output:**
-```
-✓ Knowledge Base: 2029 documents loaded
-✓ Embedding Model: all-MiniLM-L6-v2
-✓ LLM Model: Llama 3.2:3b (via Ollama)
-✓ Knowledge Base: 2029 documents loaded
-✓ Embedding Model: all-MiniLM-L6-v2
-✓ LLM Model: Llama 3.2:3b (via Ollama)
-✓ Retrieval: ChromaDB (Vector Search)
-✓ Navigation Links: 28 topic mappings active
-✓ System: UltraRAG v3.1
+**Expected Output (at** `http://127.0.0.1:8000/health`**):**
+```json
+{
+  "status": "healthy",
+  "router": "ready",
+  "sessions_active": 0
+}
 ```
 
 ---
@@ -213,8 +211,9 @@ status
 ## 🆘 Need Help?
 
 1. Check `README.md` for detailed documentation
-2. Check Ollama status: `ollama ps`
-4. Verify dependencies: `pip list`
+2. Check `docs/` folder for architecture guides
+3. Verify dependencies: `pip list`
+4. Check Groq API status: [status.groq.com](https://status.groq.com)
 
 ---
 
@@ -229,5 +228,5 @@ status
 
 **That's it! Your chatbot is ready to use! 🎉**
 
-**Version**: 3.6.0  
-**Last Updated**: March 2026 (Logging & Evaluation Refinement)
+**Version**: 3.7.2  
+**Last Updated**: March 2026 (Reset & Cleanup)

@@ -1,88 +1,91 @@
-#  Chunking Script — README
+# Data Pipeline — Scraping to Vector DB
 
-##  Overview
-`chunking.py` is a Python script that processes scraped website data and breaks long text into smaller overlapping chunks. These chunks are essential for Retrieval-Augmented Generation (RAG), embedding generation, vector database indexing, and other NLP workflows.
-
-The script reads structured data from `data/scraped_data/webdata.json`, applies chunking logic (500 characters with 100 characters of overlap), and outputs the results into `data/chunks/chunks.json`.
+This document explains how raw website content flows from scraping all the way into the vector database.
 
 ---
 
-##  Features
-- Splits large text into smaller, manageable chunks  
-- Adds overlap between chunks for improved context retention  
-- Stores metadata (section name and source URL)  
-- Outputs clean, ready-to-use JSON  
-- Uses only Python standard libraries (no external installations required)
+## Pipeline Overview
+
+```
+tkrcet_links.txt  (130 URLs)
+        ↓
+tkrcet_scraper.py  (StealthyFetcher + Groq JSON structuring)
+        ↓
+data/scraped_data/outputs/*.json  (~97 per-URL JSON files)
+        ↓
+scripts/ingest.py  (chunking + embedding + indexing)
+        ↓
+data/chunks/unified_vectors.json   ← source of truth
+app/database/vectordb/*.index/.pkl ← runtime search indices
+```
 
 ---
 
-## Chunk example
+## Stage 1 — Scraping (`tkrcet_scraper.py`)
 
+Each URL from `tkrcet_links.txt` is fetched using **Scrapling's StealthyFetcher** (Playwright-based, bypasses Cloudflare).
+
+The visible page text is then sent to **Groq** (`llama-3.1-8b-instant`) in JSON mode, which structures it into:
+
+```json
 {
-  "text": "chunk of text here...",
-  "section": "About Us",
-  "source_url": "https://example.com"
+  "sections": [
+    { "title": "Department Overview", "content": "..." },
+    { "title": "Vision & Mission",    "content": "..." }
+  ]
 }
+```
 
-## How It Works
+Each URL gets its own `.json` file saved to `data/scraped_data/outputs/`.
 
-- Loads input JSON from webdata.json
+> **Teammates:** You do NOT need to run the scraper. All output JSONs are committed to Git.  
+> To re-scrape a single failed URL: `python scripts/rescrape_single.py "<url>"`
 
-- Iterates through all pages
+---
 
-- Iterates through all sections inside each page
+## Stage 2 — Ingestion & Chunking (`scripts/ingest.py`)
 
-- Reads text content from the "texts" list
+`ingest.py` reads all source data and builds the vector indices:
 
-- Splits text into chunks using:
+### Chunking Strategy
+- **Chunk size:** 500 characters
+- **Overlap:** 100 characters (sliding window for context continuity)
+- **Metadata stored:** `source_url`, `section_title`, `data_type`
 
-    CHUNK_SIZE = 500
+### Sources Processed
+| Source | Type | Strategy |
+|---|---|---|
+| `data/scraped_data/outputs/*.json` | Web content | Chunked (500 chars, 100 overlap) |
+| `data/rawdata/faq_rows.json` | FAQ pairs | One chunk per Q&A (no split) |
+| `data/knowledge_base.json` | Key facts | One chunk per fact |
 
-    OVERLAP = 100
+### Output Files
+| File | Description |
+|---|---|
+| `data/chunks/unified_vectors.json` | All chunks + embeddings (committed to Git) |
+| `data/chunks/corpus_ultrarag.jsonl` | UltraRAG-format corpus (auto-generated) |
+| `app/database/vectordb/ultrarag_faiss.index` | FAISS dense index (auto-generated) |
+| `app/database/vectordb/ultrarag_bm25.pkl` | BM25 sparse index (auto-generated) |
 
-- Attaches metadata (section, source_url)
+---
 
-- Saves all generated chunks to chunks.json
+## Running Ingestion
 
-## Chunking Logic
+```powershell
+# Run once after cloning (or after re-scraping)
+python scripts/ingest.py
+```
 
-The script uses a sliding window mechanism:
+> Estimated time: ~2–5 minutes depending on machine.
 
-**Chunk size:** 500 characters  
+---
 
-**Overlap:** 100 characters  
+## Re-scraping a Single URL
 
-### Example flow for a long text:
+If a specific page needs to be refreshed:
 
-Chunk 1 → characters 0–500
+```powershell
+python scripts/rescrape_single.py "https://tkrcet.ac.in/computer-science-and-engineering/"
+```
 
-Chunk 2 → characters 400–900
-
-Chunk 3 → characters 800–1300
-
-This overlap ensures context continuity so your RAG model returns accurate answers
-
-## How to Run
-1. Ensure webdata.json is present
-
-Place it in the same folder as chunking.py.
-
-2. Run the script
-
-    python chunking.py
-
-3. Output
-
-    XXXX chunks saved to chunks.json
-
-Generated file location : data/chunks/chunks.json
-
-## Requirements
-
-- This script uses only Python’s built-in standard libraries.
-
-## Notes
-
-- Ensure the directory data/chunks/ exists before running the script
-
-- Ensure webdata.json file exists in path data/scraped_data.
+Then re-run `python scripts/ingest.py` to rebuild the indices.
