@@ -9,10 +9,7 @@ from langchain_core.tools import Tool
 from langchain_core.prompts import PromptTemplate
 from app.services.ultra_rag import UltraRAGSystem
 from app.services.sql_system import SQLSystem
-import sys
-import io
 
-# Fix Windows encoding handled in ultra_rag.py
 
 class DeepReasoningChain:
     """
@@ -21,39 +18,50 @@ class DeepReasoningChain:
     1. College Knowledge (RAG) - For general info, syllabus, faculty, etc.
     2. Student Database (SQL) - For student counts, placements, marks, etc.
     """
-    
+
     def __init__(self, rag_system=None, sql_system=None):
-        print("\n" + "="*50)
+        print("\n" + "=" * 50)
         print("Initializing Deep Reasoning Chain...")
-        
+
         # 1. Initialize Systems (Use injected or create new)
         self.rag_system = rag_system if rag_system else UltraRAGSystem()
         self.sql_system = sql_system if sql_system else SQLSystem()
-        
+
         # 2. Define Tools
         tools = [
             Tool(
                 name="CollegeKnowledge",
                 func=self._rag_wrapper,
-                description="Use this for general questions about the college, syllabus, faculty, history, timings, rules, or static information. Input should be the full question."
+                description=(
+                    "Use this for general questions about the college,"
+                    "syllabus, faculty, history, timings, rules,"
+                    " or other static information. "
+                    "Input should be the full question."
+                ),
             ),
             Tool(
                 name="StudentDatabase",
                 func=self._sql_wrapper,
-                description="Use this ONLY for queries about student data, counts, placements, companies, specific student details, or existing database stats. Input should be the full question."
-            )
+                description=(
+                    "Use this ONLY for queries about student data, counts,"
+                    " placements, companies,specific student details,"
+                    " or existing database stats. "
+                    "Input should be the full question."
+                ),
+            ),
         ]
-        
+
         # 3. Initialize LLM (Llama 3.2 via Ollama)
         llm = ChatOllama(
             model="llama3.2:3b",
-            temperature=0, # Zero temp for precise tool use
-            base_url="http://localhost:11434"
+            temperature=0,  # Zero temp for precise tool use
+            base_url="http://localhost:11434",
         )
-        
+
         # 4. Create ReAct Agent
         # Explicit instructions for the agent
-        template = """Answer the following questions as best you can. You have access to the following tools:
+        template = """Answer the following questions as best you can.
+            You have access to the following tools:
 
 {tools}
 
@@ -74,15 +82,15 @@ Question: {input}
 Thought:{agent_scratchpad}"""
 
         prompt = PromptTemplate.from_template(template)
-        
+
         agent = create_react_agent(llm, tools, prompt)
-        
+
         self.agent_executor = AgentExecutor(
-            agent=agent, 
-            tools=tools, 
-            verbose=True, # Show thinking process in console
+            agent=agent,
+            tools=tools,
+            verbose=True,  # Show thinking process in console
             handle_parsing_errors=True,
-            max_iterations=5
+            max_iterations=5,
         )
         print("✓ Deep Reasoning Agent Ready")
 
@@ -102,14 +110,19 @@ Thought:{agent_scratchpad}"""
         try:
             print(f"\n[DeepChain] Processing: {query}")
             result = self.agent_executor.invoke({"input": query})
-            return result['output']
+            return result["output"]
         except Exception as e:
             print(f"⚠ Chain Error: {e}")
             if is_fallback:
-                return "I'm having trouble processing that complex request right now. Please try a simpler question."
-            # Fallback to simple RAG if agent fails, but marked as fallback to prevent loops
+                return (
+                    "I'm having trouble processing this request right now. "
+                    "Please try a simpler question."
+                )
+            # Fallback to simple RAG if agent fails,
+            # but marked as fallback to prevent loops
             try:
-                # Use the rag_system directly to avoid re-triggering the chain if called from a router
+                # Use the rag_system directly to avoid re-triggering the chain
+                # if called from a router
                 return self.rag_system(query)
             except Exception:
                 return "I encountered an error while processing your request."
