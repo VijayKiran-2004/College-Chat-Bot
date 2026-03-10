@@ -3,15 +3,15 @@ Intent Detector - Smart routing using Semantic Similarity (all-MiniLM-L6-v2)
 Uses embeddings-based cosine similarity for fast, local intent classification.
 Falls back to 'general' if model is unavailable.
 """
+
 import re
-import os
 import sys
 import io
 import numpy as np
 
 # Fix Windows encoding (only if not already wrapped)
-if sys.platform.startswith('win') and not isinstance(sys.stdout, io.TextIOWrapper):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+if sys.platform.startswith("win") and not isinstance(sys.stdout, io.TextIOWrapper):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 
 class IntentDetector:
@@ -24,29 +24,46 @@ class IntentDetector:
         # Load semantic model
         try:
             from sentence_transformers import SentenceTransformer
-            from sklearn.metrics.pairwise import cosine_similarity
 
-            self.semantic_model = semantic_model if semantic_model is not None else SentenceTransformer('all-MiniLM-L6-v2')
+            self.semantic_model = (
+                semantic_model
+                if semantic_model is not None
+                else SentenceTransformer("all-MiniLM-L6-v2")
+            )
 
             intent_examples = {
-                'greeting': ["hi", "hello", "hey", "good morning", "how are you"],
-                'student': [
-                    "show me student cgpa scores", "list students with high gpa",
-                    "which students are placed", "top 5 students by gpa",
-                    "how many students were placed", "student attendance details",
-                    "number of placed students", "students with cgpa above 8",
-                    "average gpa of students", "branch wise student count",
-                    "student placement statistics", "how many students are not placed"
+                "greeting": ["hi", "hello", "hey", "good morning", "how are you"],
+                "student": [
+                    "show me student cgpa scores",
+                    "list students with high gpa",
+                    "which students are placed",
+                    "top 5 students by gpa",
+                    "how many students were placed",
+                    "student attendance details",
+                    "number of placed students",
+                    "students with cgpa above 8",
+                    "average gpa of students",
+                    "branch wise student count",
+                    "student placement statistics",
+                    "how many students are not placed",
                 ],
-                'general': [
-                    "who is the principal", "what are college timings",
-                    "how to apply for bonafide certificate", "what courses are offered",
-                    "fee structure details", "hostel facilities", "transport routes",
-                    "campus life and events", "exam schedule and timetable",
-                    "college history", "how to apply for scholarship",
-                    "college location and address", "how many students pass out every year",
-                    "what is the college ranking", "tell me about admissions"
-                ]
+                "general": [
+                    "who is the principal",
+                    "what are college timings",
+                    "how to apply for bonafide certificate",
+                    "what courses are offered",
+                    "fee structure details",
+                    "hostel facilities",
+                    "transport routes",
+                    "campus life and events",
+                    "exam schedule and timetable",
+                    "college history",
+                    "how to apply for scholarship",
+                    "college location and address",
+                    "how many students pass out every year",
+                    "what is the college ranking",
+                    "tell me about admissions",
+                ],
             }
 
             self.intent_embeddings = {}
@@ -56,10 +73,12 @@ class IntentDetector:
                 )
 
             self.use_semantic_fallback = True
-            print(f"  ✓ Semantic routing ready (all-MiniLM-L6-v2)")
+            print("  ✓ Semantic routing ready (all-MiniLM-L6-v2)")
         except Exception as e:
-            print(f"  ⚠ Semantic model not available ({e}), defaulting all queries to 'general'")
-
+            print(
+                f"  ⚠ Semantic model not available ({e}),"
+                " defaulting all queries to 'general'"
+            )
 
     def detect_intent(self, query):
         """
@@ -70,9 +89,11 @@ class IntentDetector:
         query_lower = query.lower().strip()
 
         # Always check greetings with regex first (instant)
-        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|whats up|what's up|how do you do|good morning|good afternoon|good evening)[\s\?\!\.]*$"
+        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|"
+        r"whats up|what's up|how do you do|good morning|good afternoon|"
+        r"good evening)[\s\?\!\.]*$"
         if re.match(greetings_pattern, query_lower):
-            return 'greeting'
+            return "greeting"
 
         # Semantic similarity routing
         if self.use_semantic_fallback:
@@ -82,7 +103,7 @@ class IntentDetector:
                 print(f"  ⚠ Semantic routing failed ({e}), defaulting to general")
 
         # Default to 'general' when no detection method is available
-        return 'general'
+        return "general"
 
     def _semantic_detect_intent(self, query):
         """Use semantic similarity for intent classification"""
@@ -100,11 +121,11 @@ class IntentDetector:
 
         if best_score < 0.3:
             # Low confidence — default to 'general' (safest fallback)
-            return 'general'
+            return "general"
 
         # Check for hybrid
-        if scores.get('student', 0) > 0.45 and scores.get('general', 0) > 0.45:
-            return 'hybrid'
+        if scores.get("student", 0) > 0.45 and scores.get("general", 0) > 0.45:
+            return "hybrid"
 
         return best_intent
 
@@ -113,19 +134,19 @@ class IntentDetector:
         query_lower = query.lower()
         entities = {}
 
-        student_id_match = re.search(r'\b(\d{5,10})\b', query)
+        student_id_match = re.search(r"\b(\d{5,10})\b", query)
         if student_id_match:
-            entities['student_id'] = student_id_match.group(1)
+            entities["student_id"] = student_id_match.group(1)
 
-        departments = ['cse', 'ece', 'eee', 'civil', 'mechanical', 'it', 'mba']
+        departments = ["cse", "ece", "eee", "civil", "mechanical", "it", "mba"]
         for dept in departments:
             if dept in query_lower:
-                entities['department'] = dept.upper()
+                entities["department"] = dept.upper()
                 break
 
-        name_match = re.search(r'\b([A-Z][a-z]+ [A-Z][a-z]+)\b', query)
+        name_match = re.search(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b", query)
         if name_match:
-            entities['name'] = name_match.group(1)
+            entities["name"] = name_match.group(1)
 
         return entities
 
@@ -150,7 +171,7 @@ if __name__ == "__main__":
 
     mode = "Semantic (MiniLM)" if detector.use_semantic_fallback else "Regex Default"
     print(f"\nMode: {mode}")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
     correct = 0
     for query, expected in test_queries:
@@ -160,4 +181,6 @@ if __name__ == "__main__":
             correct += 1
         print(f"  [{match}] '{query}' -> {result} (expected: {expected})\n")
 
-    print(f"Score: {correct}/{len(test_queries)} ({int(correct/len(test_queries)*100)}%)")
+    print(
+        f"Score: {correct}/{len(test_queries)} ({int(correct/len(test_queries)*100)}%)"
+    )

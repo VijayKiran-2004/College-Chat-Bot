@@ -9,21 +9,21 @@ import os
 from pathlib import Path
 
 # Fix for WinError 1114 (DLL initialization failed)
-# Must import sentence_transformers/torch BEFORE pandas/numpy to ensure correct DLL loading
+# Must import sentence_transformers/torch BEFORE pandas/numpy
 try:
-    from sentence_transformers import SentenceTransformer
+    from sentence_transformers import SentenceTransformer  # noqa: F401
 except ImportError:
     pass
 
 # Add app directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from app.services.query_router import QueryRouter
+from app.services.query_router import QueryRouter  # noqa: E402
 
 
 class TerminalChatbot:
     """Interactive terminal chatbot interface"""
-    
+
     def __init__(self):
         """Initialize chatbot with Hybrid RAG-SQL system"""
         print("\n" + "=" * 70)
@@ -31,7 +31,7 @@ class TerminalChatbot:
         print("=" * 70)
         print("Initializing chatbot system...")
         print()
-        
+
         try:
             self.router = QueryRouter()
             self.running = True
@@ -80,13 +80,13 @@ class TerminalChatbot:
             # Access internal components for status
             rag = self.router.rag_system
             sql = self.router.sql_system
-            
+
             num_docs = len(rag.documents)
             print(f"✓ Knowledge Base: {num_docs} documents loaded")
-            print(f"✓ Embedding Model: all-MiniLM-L6-v2")
+            print("✓ Embedding Model: all-MiniLM-L6-v2")
             print(f"✓ LLM Model: {rag.ollama_model} (via Ollama)")
             print(f"✓ SQL Database: Connected to {sql.db_path}")
-            print(f"✓ Retrieval: Hybrid (FAISS + BM25) + SQL")
+            print("✓ Retrieval: Hybrid (FAISS + BM25) + SQL")
             print("-" * 70 + "\n")
         except Exception as e:
             print(f"✗ Error getting status: {str(e)}\n")
@@ -96,50 +96,50 @@ class TerminalChatbot:
         if not self.running:
             print("\n✗ Chatbot could not be initialized. Exiting.")
             return
-        
+
         self.print_welcome()
-        
+
         while True:
             try:
                 # Get user input
                 user_input = input("You: ").strip()
-                
+
                 if not user_input:
                     continue
-                
+
                 # Handle commands
-                if user_input.lower() in ['exit', 'quit']:
+                if user_input.lower() in ["exit", "quit"]:
                     print("\n" + "=" * 70)
                     print("Thank you for using TKRCET College Assistant!")
                     print("=" * 70 + "\n")
                     self.router.close()
                     break
-                
-                elif user_input.lower() == 'help':
+
+                elif user_input.lower() == "help":
                     self.print_help()
-                
-                elif user_input.lower() == 'clear':
-                    os.system('cls' if os.name == 'nt' else 'clear')
+
+                elif user_input.lower() == "clear":
+                    os.system("cls" if os.name == "nt" else "clear")
                     self.print_welcome()
-                
-                elif user_input.lower() == 'status':
+
+                elif user_input.lower() == "status":
                     self.print_status()
-                
+
                 else:
                     # Process query through Hybrid system
                     print("\nAssistant: ", end="", flush=True)
-                    
+
                     try:
                         # Direct call to router logic
-                        # We print a newline first because the router might print internal logs (rare but possible)
+                        # Print newline to avoid router log overlap
                         # Actually router returns a string, so we just print it.
                         answer = self.router(user_input)
                         print(answer)
                     except Exception as e:
                         print(f"[Error processing query: {str(e)}]")
-                    
+
                     print()
-                
+
             except KeyboardInterrupt:
                 print("\n\n" + "=" * 70)
                 print("Chatbot interrupted. Goodbye!")
@@ -156,5 +156,5 @@ def main():
     chatbot.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
