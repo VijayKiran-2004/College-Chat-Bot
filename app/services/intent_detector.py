@@ -89,9 +89,11 @@ class IntentDetector:
         query_lower = query.lower().strip()
 
         # Always check greetings with regex first (instant)
-        greetings_pattern = r"^(hi|hello|hey|greetings|how are you|how r u|how are u|"
-        r"whats up|what's up|how do you do|good morning|good afternoon|"
-        r"good evening)[\s\?\!\.]*$"
+        greetings_pattern = (
+            r"^(hi|hello|hey|greetings|how are you|how r u|how are u|"
+            r"whats up|what's up|how do you do|good morning|good afternoon|"
+            r"good evening)[\s\?\!\.]*$"
+        )
         if re.match(greetings_pattern, query_lower):
             return "greeting"
 
